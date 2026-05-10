@@ -1,0 +1,107 @@
+# Aegis persistent backend stack.
+# Runs on a single small VM (Hetzner CX22 / Oracle Always Free) and locally for dev.
+# Five services on a shared bridge network (aegis_net), with the tor service on host net
+# so it can reach the published Caddy ports via 127.0.0.1.
+
+services:
+  conduit:
+    image: matrixconduit/matrix-conduit:latest
+    container_name: aegis-conduit
+    restart: unless-stopped
+    networks: [aegis_net]
+    environment:
+      CONDUIT_SERVER_NAME: ${AEGIS_DOMAIN:-aegis.app}
+      CONDUIT_DATABASE_BACKEND: rocksdb
+      CONDUIT_PORT: "6167"
+      CONDUIT_ALLOW_REGISTRATION: "true"
+      CONDUIT_ADDRESS: 0.0.0.0
+      CONDUIT_REGISTRATION_TOKEN: ${CONDUIT_REGISTRATION_TOKEN:-changeme}
+      CONDUIT_DATABASE_PATH: /var/lib/matrix-conduit
+    volumes:
+      - conduit_data:/var/lib/matrix-conduit
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:6167/_matrix/client/versions || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  strfry:
+    build:
+      context: ./docker/strfry
+      dockerfile: Dockerfile
+    container_name: aegis-strfry
+    restart: unless-stopped
+    networks: [aegis_net]
+    volumes:
+      - strfry_data:/app/strfry-db
+      - ./docker/strfry/strfry.conf:/etc/strfry.conf:ro
+    healthcheck:
+      # Bash /dev/tcp probe — works because the runtime image has bash.
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/7777' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  ssb-pub:
+    build:
+      context: ./docker/ssb-pub
+      dockerfile: Dockerfile
+    container_name: aegis-ssb-pub
+    restart: unless-stopped
+    networks: [aegis_net]
+    volumes:
+      - ssb_data:/root/.ssb
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8989/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  tor:
+    image: torproject/tor:latest
+    container_name: aegis-tor
+    restart: unless-stopped
+    # network_mode: host so the hidden service reaches Caddy's published 80/443 on 127.0.0.1.
+    network_mode: host
+    volumes:
+      - ./tor/torrc:/etc/tor/torrc:ro
+      - tor_data:/var/lib/tor
+    command: ["tor", "-f", "/etc/tor/torrc"]
+
+  caddy:
+    image: caddy:latest
+    container_name: aegis-caddy
+    restart: unless-stopped
+    networks: [aegis_net]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      AEGIS_DOMAIN: ${AEGIS_DOMAIN:-aegis.app}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-admin@aegis.app}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      conduit:
+        condition: service_healthy
+      strfry:
+        condition: service_healthy
+      ssb-pub:
+        condition: service_healthy
+
+networks:
+  aegis_net:
+    driver: bridge
+
+volumes:
+  conduit_data:
+  strfry_data:
+  ssb_data:
+  tor_data:
+  caddy_data:
+  caddy_config:

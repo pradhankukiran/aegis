@@ -1,0 +1,13 @@
+# Aegis Tor hidden service for the Crucible whistleblower drop (plan §3.5).
+# The tor container runs with network_mode: host, so 127.0.0.1 here is the VM host —
+# which is where Caddy's :80 / :443 are published. Caddy is on the aegis_net bridge,
+# but its ports are forwarded to the host, so the hidden service reaches it via 127.0.0.1.
+
+HiddenServiceDir /var/lib/tor/aegis_hs/
+HiddenServicePort 80 127.0.0.1:80
+HiddenServicePort 443 127.0.0.1:443
+HiddenServiceVersion 3
+
+# Quiet logging by default; bump to info/debug when troubleshooting.
+Log notice stdout
+DataDirectory /var/lib/tor
