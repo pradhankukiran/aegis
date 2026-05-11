@@ -35,6 +35,7 @@ import {
   wrapNoteContent,
 } from "./envelope";
 import { publishDeleteMarker, publishSaveMarker } from "./feed";
+import { persistNote } from "./persistence";
 import {
   deleteNote as deleteNoteFromStore,
   loadActiveNotes,
@@ -42,6 +43,9 @@ import {
   saveNote,
 } from "./storage";
 import type { Note, NoteDraft } from "./types";
+import { attachMatrixSync, getDoc, setText as setDocText } from "./crdt";
+import { pubkeyHex } from "../identity";
+import { mxidFromPubkeyHex } from "../transport/matrix";
 
 /* -------------------------------------------------------------------------- */
 /* useNotes                                                                    */
@@ -97,7 +101,8 @@ export function useNotes(): {
  *  - `draft`    the working plaintext copy; mutated via `setDraft`.
  *  - `setDraft` partial mutator — accepts a `Partial<NoteDraft>` so the UI
  *               can update title or content independently.
- *  - `save`     seal current draft + persist + publish SSB marker. Returns
+ *  - `save`     seal current draft + persist + publish save marker (no-op
+ *               post-SSB; reserved for future feed channel). Returns
  *               the new `Note` row.
  *  - `isDirty`  draft differs from the most recently saved snapshot.
  *  - `loading`  true until the initial unwrap settles.
@@ -242,16 +247,18 @@ export function useNote(
       const now = Date.now();
       const envelope = await wrapNoteContent(masterKey, current.content);
       const prior = noteRef.current;
+      // Carry every prior field forward (share state, Pinata CID, ...)
+      // and overwrite only the bits that the save changed.
       const updated: Note = {
+        ...(prior ?? { createdAt: now }),
         id: current.id,
         title: current.title,
         contentEnvelope: envelope,
-        createdAt: prior?.createdAt ?? now,
         updatedAt: now,
-        ...(prior?.sharedRoomId ? { sharedRoomId: prior.sharedRoomId } : {}),
       };
       await saveNote(updated);
-      // SSB marker is best-effort; publishSaveMarker swallows errors.
+      // publishSaveMarker is a no-op post-SSB removal; retained as a hook
+      // for the future feed-channel reintroduction.
       void publishSaveMarker(transport, updated.id, updated.updatedAt);
       setNote(updated);
       setBaseline({
@@ -261,6 +268,35 @@ export function useNote(
       });
       noteRef.current = updated;
       onSavedRef.current?.();
+      // Best-effort Pinata mirror. We don't block the user-facing save UI on
+      // the cloud round-trip — if it lands, the IDB row is updated with the
+      // CID via a follow-up `saveNote`; if it fails (or 503/unconfigured),
+      // local-only persistence stands. `identity` is required to sign the
+      // upload-URL request.
+      if (identity) {
+        void persistNote(updated, identity)
+          .then(async (res) => {
+            if (res.mode === "uploaded") {
+              try {
+                await saveNote(res.note);
+                if (noteRef.current?.id === res.note.id) {
+                  noteRef.current = res.note;
+                  setNote(res.note);
+                }
+              } catch (err) {
+                console.warn(
+                  "[scribe] failed to write Pinata CID back to IDB:",
+                  err,
+                );
+              }
+            }
+          })
+          .catch((err) => {
+            // Non-503 errors land here. The save itself already succeeded
+            // locally; the Pinata mirror is best-effort.
+            console.warn("[scribe] Pinata mirror upload failed:", err);
+          });
+      }
       return updated;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -269,7 +305,7 @@ export function useNote(
     } finally {
       setSaving(false);
     }
-  }, [masterKey, transport]);
+  }, [identity, masterKey, transport]);
 
   const isDirty = useMemo<boolean>(() => {
     if (!draft || !baseline) return false;
@@ -330,12 +366,32 @@ export function useCreateNote(
         };
         await saveNote(note);
         void publishSaveMarker(transport, note.id, note.updatedAt);
+        // Best-effort Pinata mirror; same shape as the save flow. The
+        // initial CID is written back to IDB so subsequent saves carry it.
+        if (identity) {
+          void persistNote(note, identity)
+            .then(async (res) => {
+              if (res.mode === "uploaded") {
+                try {
+                  await saveNote(res.note);
+                } catch (err) {
+                  console.warn(
+                    "[scribe] failed to write initial Pinata CID:",
+                    err,
+                  );
+                }
+              }
+            })
+            .catch((err) => {
+              console.warn("[scribe] Pinata mirror create-upload failed:", err);
+            });
+        }
         return note;
       } finally {
         setCreating(false);
       }
     },
-    [masterKey, transport],
+    [identity, masterKey, transport],
   );
 
   return { create, creating };
@@ -346,10 +402,10 @@ export function useCreateNote(
 /* -------------------------------------------------------------------------- */
 
 /**
- * Returns a `remove(id)` that soft-deletes the row in IndexedDB (tombstone)
- * and best-effort publishes an `aegis-note-deleted` marker on SSB. The
- * tombstone keeps the cross-device sync path correct — see
- * `storage.ts#deleteNote` and `feed.ts#publishDeleteMarker`.
+ * Returns a `remove(id)` that soft-deletes the row in IndexedDB (tombstone).
+ * Also calls `publishDeleteMarker`, which is a no-op post-SSB (the future
+ * feed channel will pick this hook up). See `storage.ts#deleteNote` and
+ * `feed.ts#publishDeleteMarker`.
  */
 export function useDeleteNote(
   transport: AegisTransport | null = null,
@@ -363,7 +419,8 @@ export function useDeleteNote(
       setRemoving(true);
       try {
         await deleteNoteFromStore(id);
-        // Best-effort SSB marker; publishDeleteMarker swallows its own errors.
+        // publishDeleteMarker is a no-op post-SSB; retained for the future
+        // feed-channel reintroduction.
         void publishDeleteMarker(transport, id);
       } finally {
         setRemoving(false);
@@ -379,36 +436,49 @@ export function useDeleteNote(
 /* -------------------------------------------------------------------------- */
 
 /**
- * Set up the Matrix-side scaffolding for a shared note.
+ * Set up the Matrix-side scaffolding for a shared note + fan out share
+ * invites to specific recipients.
  *
- * v1 behaviour:
- *   1. Call `transport.matrix.createRoom({ name: "aegis-note-<id>",
- *      encrypted: true })`.
- *   2. Stamp the returned `room_id` onto the note's persisted row as
- *      `sharedRoomId`.
- *   3. Return the room id so the UI can show "shared" indicator + the room
- *      id (in monospace, for monitoring during dev).
+ * Behaviour:
+ *   1. Resolve recipient pubkeys → Matrix MXIDs via the same derivation
+ *      `MatrixTransport` uses (first 24 hex chars of the x-only pubkey as
+ *      localpart + the transport's homeserver domain). The MXID list is
+ *      passed to `createRoom` as initial `invite` so the homeserver
+ *      bootstraps Megolm sessions for the peers immediately.
+ *   2. Create the Matrix room (encrypted, private). Returned `roomId`.
+ *   3. Stamp `{ sharedRoomId, sharedWith, sharedAt }` onto the note row +
+ *      persist locally + mirror to Pinata so cross-device the share state
+ *      is recoverable.
+ *   4. For each recipient, send a direct-message handshake with
+ *      `{ type: "aegis.scribe.share-invite", noteId, sharedRoomId,
+ *      pinataCid }` so the peer's device can join the room + load the
+ *      envelope from Pinata. `directMessage` uses the Matrix → Nostr
+ *      fallback chain — it works whichever network the peer is on.
  *
- * What's deliberately not wired in v1 (live-infra deferred):
- *   - The actual Yjs↔Matrix update sync. We'd hook `doc.on("update")` to
- *     publish encoded updates, and join the room to apply incoming updates.
- *     Both ends need a real homeserver to verify.
- *   - Share-invite events to specific peers. The Matrix room is private with
- *     no invitees in v1; future work invites the peer's MXID and emits an
- *     AegisEvent of type `scribe.share-invite`.
+ * `share` can be invoked without `withPubkeys` to create an "open" shared
+ * room (no invitees) — useful as a checkpoint before the user types in
+ * recipient handles. Calling again with recipients adds them by sending
+ * additional share-invite DMs (the room itself stays the same).
+ *
+ * Live-infra deferred items (the Yjs ↔ Matrix sync loop) live in `crdt.ts`
+ * via `attachMatrixSync`. The hook layer wires that up via the editor
+ * component when a note is shared.
  */
 export function useShareNote(
   id: string | null,
+  identity: Identity | null,
   transport: AegisTransport | null,
 ): {
-  share: () => Promise<string | null>;
+  share: (withPubkeys?: string[]) => Promise<string | null>;
   sharing: boolean;
   isShared: boolean;
   sharedRoomId: string | null;
+  sharedWith: string[];
   error: string | null;
 } {
   const [sharing, setSharing] = useState(false);
   const [sharedRoomId, setSharedRoomId] = useState<string | null>(null);
+  const [sharedWith, setSharedWith] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Track the persisted state when the id changes. setState always goes
@@ -418,7 +488,9 @@ export function useShareNote(
     let cancelled = false;
     if (!id) {
       Promise.resolve().then(() => {
-        if (!cancelled) setSharedRoomId(null);
+        if (cancelled) return;
+        setSharedRoomId(null);
+        setSharedWith([]);
       });
       return () => {
         cancelled = true;
@@ -429,53 +501,254 @@ export function useShareNote(
       .then((row) => {
         if (cancelled) return;
         setSharedRoomId(row?.sharedRoomId ?? null);
+        setSharedWith(row?.sharedWith ?? []);
       })
       .catch(() => {
         if (cancelled) return;
         setSharedRoomId(null);
+        setSharedWith([]);
       });
     return () => {
       cancelled = true;
     };
   }, [id]);
 
-  const share = useCallback(async (): Promise<string | null> => {
-    if (!id) return null;
-    if (!transport) {
-      setError("transport not connected");
-      return null;
-    }
-    setSharing(true);
-    setError(null);
-    try {
-      const roomId = await transport.matrix.createRoom({
-        name: "aegis-note-" + id,
-        encrypted: true,
-      });
-      const existing = await loadNote(id);
-      if (!existing) {
-        throw new Error("note not found");
+  const share = useCallback(
+    async (withPubkeys: string[] = []): Promise<string | null> => {
+      if (!id) return null;
+      if (!transport) {
+        setError("transport not connected");
+        return null;
       }
-      const updated: Note = { ...existing, sharedRoomId: roomId };
-      await saveNote(updated);
-      setSharedRoomId(roomId);
-      return roomId;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-      return null;
-    } finally {
-      setSharing(false);
-    }
-  }, [id, transport]);
+      if (!identity) {
+        setError("identity not loaded");
+        return null;
+      }
+      setSharing(true);
+      setError(null);
+      try {
+        // Validate every recipient pubkey shape up front so we don't
+        // half-create the room. `pubkeyHex` from MXID derivation expects
+        // 66 hex chars (SEC1-compressed) — match that here.
+        const cleanRecipients: string[] = [];
+        for (const raw of withPubkeys) {
+          const trimmed = (raw ?? "").trim();
+          if (!trimmed) continue;
+          if (!/^[0-9a-fA-F]{66}$/.test(trimmed)) {
+            throw new Error(
+              "share: recipient pubkey must be 66 hex chars (SEC1-compressed)",
+            );
+          }
+          cleanRecipients.push(trimmed.toLowerCase());
+        }
+        // Derive MXIDs from the recipient pubkeys. We reuse the canonical
+        // helper in the Matrix transport so the localpart derivation can
+        // never drift between scribe-side invitees and DM-side recipients.
+        const domain = matrixDomain(transport);
+        const invitees = cleanRecipients.map((pk) =>
+          mxidFromPubkeyHex(pk, domain),
+        );
+        const existing = await loadNote(id);
+        if (!existing) {
+          throw new Error("note not found");
+        }
+        // If the row already has a sharedRoomId we reuse it; new
+        // recipients become additional invitees via subsequent DMs.
+        let roomId = existing.sharedRoomId ?? null;
+        if (!roomId) {
+          roomId = await transport.matrix.createRoom({
+            name: existing.title || ("aegis-note-" + id),
+            encrypted: true,
+            invitees: invitees.length > 0 ? invitees : undefined,
+          });
+        }
+        const now = Date.now();
+        // Merge new recipients with the existing list, de-duped.
+        const mergedWith = Array.from(
+          new Set<string>([
+            ...(existing.sharedWith ?? []),
+            ...cleanRecipients,
+          ]),
+        );
+        const updated: Note = {
+          ...existing,
+          sharedRoomId: roomId,
+          sharedWith: mergedWith,
+          sharedAt: existing.sharedAt ?? now,
+        };
+        await saveNote(updated);
+
+        // Best-effort Pinata mirror — the share-invite payload below
+        // carries the CID so the peer can fetch + decrypt the current
+        // envelope state. If Pinata isn't configured, we still send the
+        // invite (the room exists; the peer will pick up live edits via
+        // CRDT once they join).
+        const senderHint = pubkeyHex(identity);
+        let cid: string | undefined = updated.pinataCid;
+        try {
+          const res = await persistNote(updated, identity);
+          if (res.mode === "uploaded") {
+            await saveNote(res.note);
+            cid = res.note.pinataCid;
+          }
+        } catch (err) {
+          console.warn(
+            "[scribe] share: Pinata mirror failed (continuing):",
+            err,
+          );
+        }
+
+        // Fan out share-invite directMessages. Each is best-effort — a
+        // single peer's failure must not block the others.
+        for (const pk of cleanRecipients) {
+          const payload = JSON.stringify({
+            type: SCRIBE_SHARE_INVITE_MSGTYPE,
+            noteId: id,
+            sharedRoomId: roomId,
+            ...(cid ? { pinataCid: cid } : {}),
+            from: senderHint,
+          });
+          void transport.directMessage(pk, payload).catch((err) => {
+            console.warn(
+              "[scribe] share-invite directMessage failed for " +
+                pk.slice(0, 8) +
+                ":",
+              err,
+            );
+          });
+        }
+
+        setSharedRoomId(roomId);
+        setSharedWith(mergedWith);
+        return roomId;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+        return null;
+      } finally {
+        setSharing(false);
+      }
+    },
+    [id, identity, transport],
+  );
 
   return {
     share,
     sharing,
     isShared: sharedRoomId !== null,
     sharedRoomId,
+    sharedWith,
     error,
   };
+}
+
+/**
+ * Logical message type for the share-invite DM payload. The receiving end
+ * (the `transport-bridge` module) projects it back into a `ScribeShareInvite`.
+ */
+const SCRIBE_SHARE_INVITE_MSGTYPE = "aegis.scribe.share-invite";
+
+/**
+ * Extract the Matrix homeserver domain from the transport. We dip into
+ * `transport.matrix.mxid` (always `@localpart:domain`) rather than the raw
+ * homeserver URL because `mxid` is the public-facing getter and is what
+ * the underlying MXID derivation uses for "domain".
+ */
+function matrixDomain(transport: AegisTransport): string {
+  const mxid = transport.matrix.mxid;
+  const colon = mxid.indexOf(":");
+  if (colon < 0) {
+    throw new Error("share: transport.matrix.mxid missing domain");
+  }
+  return mxid.slice(colon + 1);
+}
+
+/* -------------------------------------------------------------------------- */
+/* useSharedNoteSync                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Bind the Yjs↔Matrix sync for a shared note, returning the live `Y.Doc`
+ * and a function the editor uses to mutate text. Returns `null` for the
+ * doc when the note isn't shared or the transport isn't connected — the
+ * editor falls back to plain-text mode in that case.
+ *
+ * The doc is seeded from the most recent `draft.content` so the local view
+ * matches what's already on disk; subsequent edits flow through the doc.
+ */
+export function useSharedNoteSync(
+  noteId: string | null,
+  sharedRoomId: string | null,
+  transport: AegisTransport | null,
+  seedContent: string | null,
+): {
+  doc: import("yjs").Doc | null;
+  text: string;
+  setText: (next: string) => void;
+} {
+  type YDoc = import("yjs").Doc;
+  const [doc, setDoc] = useState<YDoc | null>(null);
+  const [text, setTextState] = useState<string>("");
+
+  const docRef = useRef<YDoc | null>(null);
+  // Hold the seed in a ref so a parent that re-renders with a changing
+  // `seedContent` (e.g. every keystroke updates `draft.content`) doesn't
+  // tear down the matrix sync. The seed is only read on first attach.
+  const seedRef = useRef<string | null>(seedContent);
+  useEffect(() => {
+    seedRef.current = seedContent;
+  }, [seedContent]);
+
+  useEffect(() => {
+    if (!noteId || !sharedRoomId || !transport) {
+      Promise.resolve().then(() => {
+        setDoc(null);
+        setTextState("");
+      });
+      docRef.current = null;
+      return;
+    }
+    const d = getDoc(noteId);
+    docRef.current = d;
+    // Seed the doc with the most recent seed only on first attach for
+    // this note (length 0 means we've never seen the doc before in this
+    // session). Subsequent mounts pick up the in-memory state.
+    const yText = d.getText("content");
+    const seed = seedRef.current;
+    if (yText.length === 0 && seed && seed.length > 0) {
+      d.transact(() => {
+        yText.insert(0, seed);
+      });
+    }
+    // Observe text changes so React re-renders. Yjs's `observe` fires
+    // after every transaction commit, both local and remote.
+    const onChange = () => {
+      setTextState(yText.toString());
+    };
+    yText.observe(onChange);
+    // Initial render — push the current state into React.
+    Promise.resolve().then(() => {
+      setDoc(d);
+      setTextState(yText.toString());
+    });
+    const detachSync = attachMatrixSync(d, transport, sharedRoomId);
+    return () => {
+      try {
+        yText.unobserve(onChange);
+      } catch {
+        /* no-op */
+      }
+      detachSync();
+    };
+  }, [noteId, sharedRoomId, transport]);
+
+  const setText = useCallback((next: string) => {
+    const d = docRef.current;
+    if (!d) return;
+    setDocText(d, next);
+  }, []);
+
+  return { doc, text, setText };
 }
 
 /* -------------------------------------------------------------------------- */

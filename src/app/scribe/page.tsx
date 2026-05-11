@@ -9,8 +9,8 @@
  *      - No identity:  render <IdentityPanel /> with the same "Generate"
  *                      CTA Herald uses. Identity is shared across features.
  *      - Has identity: continue.
- *   2. useTransport(id) builds an AegisTransport so save-markers can hit
- *      SSB and Share can create Matrix rooms.
+ *   2. useTransport(id) builds an AegisTransport so Share can create
+ *      Matrix rooms. (Save-markers are no-op post-SSB removal.)
  *   3. useNotes + useNote drive the list + editor.
  *   4. Share emits a Matrix room scaffold; CRDT sync is the live-infra path.
  *
@@ -35,6 +35,7 @@ import {
   useNote,
   useNotes,
   useShareNote,
+  useSharedNoteSync,
 } from "@/lib/scribe";
 
 import { IdentityPanel } from "@/components/herald/IdentityPanel";
@@ -117,8 +118,24 @@ function ScribeWorkspace({ identity }: { identity: Identity }) {
     sharing,
     isShared,
     sharedRoomId,
+    sharedWith,
     error: shareError,
-  } = useShareNote(selectedId, transport);
+  } = useShareNote(selectedId, identity, transport);
+
+  // Wire the live Y.Doc ↔ Matrix sync for shared notes. The hook seeds
+  // the Y.Text from the current draft content, then routes edits through
+  // Yjs ops; the textarea is bound to `sharedText` instead of `draft.content`
+  // when `sharedRoomId` is set.
+  const seedContent = draft?.content ?? null;
+  const {
+    text: sharedText,
+    setText: sharedSetText,
+  } = useSharedNoteSync(
+    selectedId,
+    sharedRoomId,
+    transport,
+    seedContent,
+  );
 
   const handleCreate = useCallback(async () => {
     const fresh = await create();
@@ -181,6 +198,7 @@ function ScribeWorkspace({ identity }: { identity: Identity }) {
                 id={note.id}
                 isShared={isShared}
                 sharedRoomId={sharedRoomId}
+                sharedWith={sharedWith}
                 onShare={share}
                 sharing={sharing}
                 shareError={shareError}
@@ -195,6 +213,8 @@ function ScribeWorkspace({ identity }: { identity: Identity }) {
                 isDirty={isDirty}
                 loading={loading}
                 error={error}
+                sharedText={sharedRoomId ? sharedText : undefined}
+                sharedSetText={sharedRoomId ? sharedSetText : undefined}
               />
             </>
           ) : (

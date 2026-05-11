@@ -5,9 +5,11 @@
  *   - types       — Note, NoteDraft.
  *   - envelope    — wrap/unwrap helpers + Scribe master-key derivation.
  *   - storage     — IndexedDB CRUD primitives (browser-only).
- *   - feed        — SSB save-marker publisher.
- *   - crdt        — Y.js doc factory + observer helpers (scaffolding).
- *   - bridge      — incoming share-invite listener stub.
+ *   - persistence — Pinata mirror for the encrypted envelope (+ CID load).
+ *   - feed        — save/delete-marker hooks (no-op post-SSB; reserved
+ *                   for the future feed channel).
+ *   - crdt        — Y.js doc factory + Matrix sync attachment.
+ *   - bridge      — incoming share-invite listener.
  *   - hooks       — React-side state machinery for the page.
  */
 
@@ -30,6 +32,9 @@ export {
   saveNote,
 } from "./storage";
 
+export { loadNoteByCid, persistNote } from "./persistence";
+export type { PersistResult } from "./persistence";
+
 export {
   SCRIBE_DELETED_TYPE,
   SCRIBE_SAVED_TYPE,
@@ -38,6 +43,9 @@ export {
 } from "./feed";
 
 export {
+  SCRIBE_MATRIX_MSGTYPE,
+  SCRIBE_MATRIX_ORIGIN,
+  attachMatrixSync,
   disposeDoc,
   encodeUpdate,
   getDoc,
@@ -62,4 +70,5 @@ export {
   useNote,
   useNotes,
   useShareNote,
+  useSharedNoteSync,
 } from "./hooks";

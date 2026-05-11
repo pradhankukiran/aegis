@@ -1,5 +1,5 @@
 /**
- * Scribe — Y.js CRDT scaffolding for shared notes.
+ * Scribe — Y.js CRDT scaffolding for shared notes, with Matrix transport.
  *
  * Personal notes don't need CRDT: there's exactly one writer (this device),
  * so a plain string in the editor + envelope-sealed snapshot in IDB is
@@ -7,7 +7,7 @@
  * mutating the same text concurrently need conflict-free merges, and Yjs is
  * the de-facto answer for collaborative text.
  *
- * # What this module ships in v1
+ * # What this module ships
  *
  * - A `Y.Doc` factory keyed by note id, with single-doc caching so repeated
  *   `getDoc(id)` calls return the same instance (Yjs docs are stateful — you
@@ -16,22 +16,39 @@
  *   `Y.Text` inside the doc.
  * - An `observeText` helper that registers a Yjs observer and returns its
  *   removal closure — the React hook layer uses this to subscribe.
+ * - `attachMatrixSync(doc, transport, roomId)`: hook each local
+ *   `doc.on("update", ...)` to publish the encoded update as a custom
+ *   Matrix message (`m.aegis.scribe.crdt`), and apply incoming messages
+ *   of the same type back into the doc via `Y.applyUpdate(doc, bytes,
+ *   "matrix")`. The `"matrix"` origin prevents the local hook from re-
+ *   broadcasting updates that just arrived from a peer.
  *
- * # What's intentionally NOT here (live-infra deferred)
+ * # On-the-wire format
  *
- * - No transport binding. A future `bindMatrixCRDT(doc, transport, roomId)`
- *   will hook `doc.on("update", ...)` to publish encoded updates into a
- *   Matrix room as custom-typed events, and forward incoming updates back
- *   into the doc via `Y.applyUpdate`. We can't verify that loop without a
- *   live Conduit homeserver — Wave 4a defers it.
- * - No persistence to IDB. `Y.Doc` state can be serialized via
- *   `Y.encodeStateAsUpdate`; we'll layer that into `storage.ts` once shared
- *   notes have a stable on-disk shape. v1 sticks with the plaintext-snapshot
- *   model in `envelope.ts` for both personal and shared notes — sharing
- *   just adds a Matrix room id and the in-memory CRDT mirror.
+ *   {
+ *     msgtype: "m.aegis.scribe.crdt",
+ *     body: <base64url(Y.encodeStateAsUpdate or Yjs update bytes)>,
+ *   }
+ *
+ * Matrix's E2EE (Megolm) wraps the whole event content; peers in the
+ * private room are the only ones who can read `body`. The `body` itself is
+ * base64url so the field stays a JSON string (Matrix events are JSON).
+ *
+ * # What's still NOT here
+ *
+ * - No persistence to IDB of the binary Y.Doc state. Saves still wrap the
+ *   plaintext snapshot inside the existing envelope; the CRDT is the live
+ *   editing surface for shared notes, while the envelope is the historical
+ *   record. A future "binary Y state in IDB" pass can replace the snapshot.
+ * - No room scrollback verification against a real Conduit instance — the
+ *   integration test is a mocked transport. The unit tests below assert
+ *   the contract; production wiring exercises the real client.
  */
 
 import * as Y from "yjs";
+
+import { base64UrlToBytes, bytesToBase64Url } from "../crypto/encoding";
+import type { AegisTransport } from "../transport";
 
 /**
  * Conventional name of the `Y.Text` field inside every Scribe Y.Doc. All
@@ -123,4 +140,120 @@ export function observeText(
  */
 export function encodeUpdate(doc: Y.Doc): Uint8Array {
   return Y.encodeStateAsUpdate(doc);
+}
+
+/**
+ * Matrix `msgtype` used for Yjs CRDT updates inside the shared-room timeline.
+ *
+ * Picked under the `m.aegis.*` namespace so it doesn't collide with any
+ * built-in Matrix message type. The Matrix homeserver routes it like any
+ * other `m.room.message` event — only the consumer code keys off the
+ * msgtype to recognize it as a CRDT update.
+ */
+export const SCRIBE_MATRIX_MSGTYPE = "m.aegis.scribe.crdt";
+
+/**
+ * Origin tag we stamp onto every `Y.applyUpdate` for matrix-sourced bytes.
+ * The local `doc.on("update", ...)` hook reads `origin` and skips
+ * re-broadcasting when it equals this value — that's how we break the
+ * echo loop without losing local-origin updates.
+ */
+export const SCRIBE_MATRIX_ORIGIN = "matrix";
+
+/**
+ * Attach a bidirectional Yjs ↔ Matrix sync to `doc`, mediated by `roomId`
+ * inside the given AegisTransport.
+ *
+ * Wire-up:
+ *
+ *   1. `doc.on("update", handler)` — every local update is base64url-
+ *      encoded and sent as an `m.room.message` whose `msgtype` is
+ *      {@link SCRIBE_MATRIX_MSGTYPE}. We skip updates whose `origin` is
+ *      `"matrix"` to avoid re-broadcasting peer-originated updates.
+ *   2. `transport.matrix.subscribe({ roomId }, handler)` — every incoming
+ *      message of the same msgtype has its body decoded back to bytes and
+ *      handed to `Y.applyUpdate(doc, bytes, "matrix")`.
+ *
+ * Returns an unsubscribe closure that detaches both the doc observer and
+ * the Matrix listener. Idempotent — calling twice is a no-op.
+ *
+ * # Bootstrap (late-join scrollback)
+ *
+ * matrix-js-sdk's room timeline already contains scrollback for joined
+ * rooms after `startClient` (we set `initialSyncLimit: 20` in
+ * `initCrypto`). For v1 we rely on that initial sync to surface recent
+ * history; an explicit `scrollback(room, N)` call is a future enhancement
+ * for joining a long-running shared note. The unit tests assert the live-
+ * update path; scrollback exercised by integration only.
+ */
+export function attachMatrixSync(
+  doc: Y.Doc,
+  transport: AegisTransport,
+  roomId: string,
+): () => void {
+  let detached = false;
+
+  // Outbound: local update → Matrix room. Yjs's `update` event hands us
+  // the encoded delta bytes + the origin that the transact() call passed
+  // (or `null` for unkeyed local mutations). We skip origin === "matrix"
+  // so peer-applied updates don't loop back.
+  const updateHandler = (update: Uint8Array, origin: unknown): void => {
+    if (detached) return;
+    if (origin === SCRIBE_MATRIX_ORIGIN) return;
+    const body = bytesToBase64Url(update);
+    void transport.matrix
+      .sendMessage(roomId, {
+        msgtype: SCRIBE_MATRIX_MSGTYPE,
+        body,
+      })
+      .catch((err) => {
+        // Network blip / room disconnect — the next update will retry the
+        // full delta (Yjs updates are deltas; the recipient picks up state
+        // from whatever ones arrive). We log so the dev console surfaces
+        // the symptom without throwing into React render.
+        console.warn("[scribe] crdt → matrix send failed:", err);
+      });
+  };
+  doc.on("update", updateHandler);
+
+  // Inbound: Matrix room events of our msgtype → doc.applyUpdate.
+  const unsubMatrix = transport.matrix.subscribe({ roomId }, (ev) => {
+    if (detached) return;
+    if (ev.roomId !== roomId) return; // belt + suspenders
+    if (ev.type !== "m.room.message") return;
+    const content = ev.content as
+      | { msgtype?: unknown; body?: unknown }
+      | null
+      | undefined;
+    if (!content || content.msgtype !== SCRIBE_MATRIX_MSGTYPE) return;
+    const body = typeof content.body === "string" ? content.body : null;
+    if (!body) return;
+    let bytes: Uint8Array;
+    try {
+      bytes = base64UrlToBytes(body);
+    } catch (err) {
+      console.warn("[scribe] dropped crdt message: malformed base64:", err);
+      return;
+    }
+    try {
+      Y.applyUpdate(doc, bytes, SCRIBE_MATRIX_ORIGIN);
+    } catch (err) {
+      console.warn("[scribe] applyUpdate threw:", err);
+    }
+  });
+
+  return () => {
+    if (detached) return;
+    detached = true;
+    try {
+      doc.off("update", updateHandler);
+    } catch {
+      /* no-op: doc may be destroyed */
+    }
+    try {
+      unsubMatrix();
+    } catch {
+      /* no-op: listener may already be detached */
+    }
+  };
 }

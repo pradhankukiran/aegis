@@ -28,6 +28,22 @@
  * - `contentEnvelope` base64url-encoded envelope, see `envelope.ts`.
  * - `sharedRoomId`    Matrix room id when the note is shared; undefined for
  *                     personal-only notes.
+ * - `sharedWith`      Recipient pubkey hex strings (66-char SEC1-compressed
+ *                     form, matching `pubkeyHex(identity)`). Only populated
+ *                     when the note is shared — used by the toolbar badge
+ *                     ("SHARED · N peers") and as the source of truth for
+ *                     who the share-invite directMessages were sent to.
+ * - `sharedAt`        Unix ms when the share-room was minted.
+ * - `pinataCid`       Content-id of the encrypted envelope blob pinned to
+ *                     IPFS via Pinata, when present. Cross-device load can
+ *                     restore the row from this CID alone (the envelope is
+ *                     self-contained and decrypts under the master key
+ *                     derived from `identity.seckey`).
+ * - `pinataUploadedAt` Unix ms when the most recent successful upload of
+ *                      `contentEnvelope` to Pinata completed. Drives the
+ *                      "is the cloud copy stale?" heuristic — if it's older
+ *                      than `updatedAt`, the local envelope hasn't been
+ *                      mirrored yet.
  * - `createdAt`       Unix ms.
  * - `updatedAt`       Unix ms. Sort key for the list (secondary index).
  * - `deletedMarker`   Soft-delete tombstone. When `true`, the row exists in
@@ -43,6 +59,10 @@ export type Note = {
   title: string;
   contentEnvelope: string;
   sharedRoomId?: string;
+  sharedWith?: string[];
+  sharedAt?: number;
+  pinataCid?: string;
+  pinataUploadedAt?: number;
   createdAt: number;
   updatedAt: number;
   deletedMarker?: boolean;

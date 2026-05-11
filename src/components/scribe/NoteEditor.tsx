@@ -9,10 +9,18 @@
  * weight to the bundle and isn't on the critical path for the encrypted-
  * notes feature itself.
  *
+ * # Shared vs personal mode
+ *
+ * When `sharedText` / `sharedSetText` are supplied the body textarea is
+ * driven by a Y.Doc (see `useSharedNoteSync` in `hooks.ts`). Edits flow
+ * through Y.Text ops so concurrent peers merge cleanly; the visible value
+ * comes from the Yjs observer. Otherwise the textarea falls back to the
+ * draft's plaintext field as before.
+ *
  * Autosave: Cmd/Ctrl+S triggers an immediate save. We don't run a debounced
  * autosave in v1 — explicit-save matches the "every save is a feed entry"
- * model and avoids spamming SSB during fast typing. The dirty indicator
- * surfaces unsaved state.
+ * model and keeps the Pinata mirror request rate reasonable during fast
+ * typing. The dirty indicator surfaces unsaved state.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -34,6 +42,8 @@ export function NoteEditor({
   loading,
   error,
   disabled,
+  sharedText,
+  sharedSetText,
 }: {
   note: Note | null;
   draft: NoteDraft | null;
@@ -44,7 +54,12 @@ export function NoteEditor({
   loading: boolean;
   error: string | null;
   disabled?: boolean;
+  /** When set, the body textarea reads from this Y.Text-derived value. */
+  sharedText?: string;
+  /** When set, the body textarea writes through this Y.Text mutator. */
+  sharedSetText?: (next: string) => void;
 }) {
+  const isShared = typeof sharedSetText === "function";
   // Re-render every ~5s to keep the relative timestamp honest. The hook
   // produces a stable string for the same minute, so the cost is a single
   // setState every tick — negligible.
@@ -116,8 +131,19 @@ export function NoteEditor({
       </div>
       <div className="flex-1 overflow-hidden p-4">
         <Textarea
-          value={draft.content}
-          onChange={(e) => setDraft({ content: e.target.value })}
+          value={isShared ? (sharedText ?? "") : draft.content}
+          onChange={(e) => {
+            const next = e.target.value;
+            if (isShared && sharedSetText) {
+              sharedSetText(next);
+              // Mirror into the draft so save() seals the latest text.
+              // We keep this in sync rather than relying on the Y.Text
+              // observer because the draft is what wrapNoteContent reads.
+              setDraft({ content: next });
+            } else {
+              setDraft({ content: next });
+            }
+          }}
           placeholder="Start writing… Markdown is welcome."
           disabled={disabled}
           spellCheck={false}

@@ -1,18 +1,20 @@
 "use client";
 
 /**
- * Share-note confirmation dialog. Two phases:
+ * Share-note dialog. Two phases:
  *
- *   1. Confirm: explain that sharing creates a Matrix room scaffold and
- *      that subsequent edits will (in the live-infra tier) ship CRDT
- *      updates to peers.
- *   2. Result: after success, show the room id and a "Done" close action.
+ *   1. Confirm + collect recipients: the user pastes one peer pubkey per
+ *      line (66-char SEC1-compressed hex, the same form `pubkeyHex` returns).
+ *      Submitting calls `onShare(recipients)` which mints the Matrix room
+ *      (if not already minted) and fans out share-invite directMessages.
+ *   2. Result: after success, shows the room id + the joined peer list and
+ *      a "Done" close action. Subsequent opens allow inviting more peers.
  *
- * On failure the error message renders inline and the primary CTA returns
- * to "Create shared room".
+ * On failure the error renders inline and the primary CTA returns to
+ * "Share with peers".
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,10 +25,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export function ShareDialog({
   isShared,
   sharedRoomId,
+  sharedWith,
   onShare,
   sharing,
   error,
@@ -34,23 +38,37 @@ export function ShareDialog({
 }: {
   isShared: boolean;
   sharedRoomId: string | null;
-  onShare: () => Promise<string | null>;
+  sharedWith: string[];
+  onShare: (withPubkeys?: string[]) => Promise<string | null>;
   sharing: boolean;
   error: string | null;
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  // After a successful share within this open session we want to flip the
-  // dialog to a "Done" state without unmounting it.
+  const [recipientsInput, setRecipientsInput] = useState("");
+  // Snapshot of the room id this open-session minted (or last saw).
   const [localRoomId, setLocalRoomId] = useState<string | null>(null);
 
-  const handleShare = useCallback(async () => {
-    const roomId = await onShare();
-    if (roomId) setLocalRoomId(roomId);
-  }, [onShare]);
-
   const effectiveRoomId = localRoomId ?? sharedRoomId;
-  const showResult = isShared || effectiveRoomId !== null;
+  const showResult = (isShared || effectiveRoomId !== null) && !sharing;
+
+  // Parse the textarea into a clean list of pubkey hex strings, one per
+  // line. We don't validate the hex shape here — the hook layer does the
+  // strict 66-char check and surfaces a useful error.
+  const parsedRecipients = useMemo<string[]>(() => {
+    return recipientsInput
+      .split(/[\s,]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }, [recipientsInput]);
+
+  const handleShare = useCallback(async () => {
+    const result = await onShare(parsedRecipients);
+    if (result) {
+      setLocalRoomId(result);
+      setRecipientsInput("");
+    }
+  }, [onShare, parsedRecipients]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -60,7 +78,7 @@ export function ShareDialog({
           disabled={disabled}
           className="shadow-[var(--shadow-brutal)]"
         >
-          {isShared ? "Shared" : "Share"}
+          {isShared ? "Invite more" : "Share"}
         </Button>
       </DialogTrigger>
       <DialogContent className="border-2 border-foreground rounded-none shadow-[var(--shadow-brutal-lg)]">
@@ -70,8 +88,8 @@ export function ShareDialog({
           </DialogTitle>
           <DialogDescription>
             {showResult
-              ? "A Matrix room has been created for collaborative edits. The room id is the address peers can join."
-              : "Sharing creates a Matrix room scaffold for collaborative editing. Once shared, content updates leave this device and travel to peers in the room."}
+              ? "A Matrix room has been created for collaborative edits. Paste more pubkeys below to invite additional peers — the room stays the same; each peer is sent a share-invite DM."
+              : "Sharing creates an encrypted Matrix room for collaborative editing. Each recipient pubkey will receive a share-invite DM with the room id and the CID of the encrypted envelope blob."}
           </DialogDescription>
         </DialogHeader>
 
@@ -83,62 +101,87 @@ export function ShareDialog({
             <p className="break-all border-2 border-foreground bg-muted p-2 font-mono text-xs">
               {effectiveRoomId}
             </p>
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              Live CRDT sync requires a connected Matrix homeserver. For now
-              the room exists as a placeholder — body edits still save to
-              this device.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <div className="border-2 border-foreground bg-muted p-3 text-sm">
-              <p className="font-mono text-[10px] uppercase tracking-widest">
-                heads up
-              </p>
-              <p className="mt-1 leading-relaxed">
-                Sharing changes the threat model: peers in the room can read
-                your edits as they happen. Personal notes stay sealed in
-                this browser until you press this button.
-              </p>
-            </div>
-            {error ? (
-              <p className="font-mono text-xs text-foreground">{error}</p>
+            {sharedWith.length > 0 ? (
+              <>
+                <p className="text-muted-foreground font-mono text-[10px] uppercase tracking-widest">
+                  invited peers ({sharedWith.length})
+                </p>
+                <ul className="border-2 border-foreground bg-muted p-2 font-mono text-[10px]">
+                  {sharedWith.map((pk) => (
+                    <li key={pk} className="break-all">
+                      {pk}
+                    </li>
+                  ))}
+                </ul>
+              </>
             ) : null}
           </div>
-        )}
+        ) : null}
+
+        <div className="flex flex-col gap-2">
+          <label
+            className="text-muted-foreground font-mono text-[10px] uppercase tracking-widest"
+            htmlFor="scribe-share-recipients"
+          >
+            Recipient pubkeys (66 hex chars, one per line)
+          </label>
+          <Textarea
+            id="scribe-share-recipients"
+            value={recipientsInput}
+            onChange={(e) => setRecipientsInput(e.target.value)}
+            placeholder="03a1b2c3...&#10;02e4d5f6..."
+            spellCheck={false}
+            rows={4}
+            className="resize-none font-mono text-xs"
+            disabled={sharing}
+          />
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            Paste one peer pubkey per line (the same SEC1-compressed form
+            other Aegis features use). Leave empty to mint an open room you
+            invite peers to later.
+          </p>
+          {error ? (
+            <p className="font-mono text-xs text-foreground">{error}</p>
+          ) : null}
+        </div>
 
         <div className="flex justify-end gap-2">
-          {showResult && effectiveRoomId ? (
+          {showResult ? (
             <Button
               type="button"
+              variant="neutral"
               onClick={() => {
                 setOpen(false);
                 setLocalRoomId(null);
+                setRecipientsInput("");
               }}
             >
               Done
             </Button>
-          ) : (
-            <>
-              <Button
-                type="button"
-                variant="neutral"
-                onClick={() => setOpen(false)}
-                disabled={sharing}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  void handleShare();
-                }}
-                disabled={sharing}
-              >
-                {sharing ? "Sharing…" : "Create shared room"}
-              </Button>
-            </>
-          )}
+          ) : null}
+          <Button
+            type="button"
+            variant="neutral"
+            onClick={() => setOpen(false)}
+            disabled={sharing}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              void handleShare();
+            }}
+            disabled={sharing}
+          >
+            {sharing
+              ? "Sharing…"
+              : showResult
+                ? "Invite peers"
+                : parsedRecipients.length > 0
+                  ? `Share with ${parsedRecipients.length}`
+                  : "Create shared room"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

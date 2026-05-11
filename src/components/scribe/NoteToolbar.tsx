@@ -25,6 +25,7 @@ export function NoteToolbar({
   id,
   isShared,
   sharedRoomId,
+  sharedWith,
   onShare,
   sharing,
   shareError,
@@ -36,13 +37,18 @@ export function NoteToolbar({
   id: string;
   isShared: boolean;
   sharedRoomId: string | null;
-  onShare: () => Promise<string | null>;
+  sharedWith: string[];
+  onShare: (withPubkeys?: string[]) => Promise<string | null>;
   sharing: boolean;
   shareError: string | null;
   onDelete: () => Promise<void>;
   deleteDisabled?: boolean;
   shareDisabled?: boolean;
 }) {
+  // Peer count for the SHARED badge — distinct from sharedWith.length only
+  // if a duplicate slips through (defensive). Set semantics mirror the
+  // hook layer's `Array.from(new Set(...))` merge in `useShareNote#share`.
+  const peerCount = new Set(sharedWith).size;
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-3">
       <div className="flex min-w-0 flex-col">
@@ -54,9 +60,18 @@ export function NoteToolbar({
         </h2>
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        {isShared ? (
+          <span
+            className="border-2 border-foreground bg-background px-2 py-1 font-mono text-[10px] uppercase tracking-widest"
+            data-testid="scribe-shared-badge"
+          >
+            SHARED · {peerCount} peer{peerCount === 1 ? "" : "s"}
+          </span>
+        ) : null}
         <ShareDialog
           isShared={isShared}
           sharedRoomId={sharedRoomId}
+          sharedWith={sharedWith}
           onShare={onShare}
           sharing={sharing}
           error={shareError}
