@@ -39,10 +39,11 @@ const BRIDGE_PORT = parseInt(process.env.AEGIS_SSB_BRIDGE_PORT || '8990', 10);
 // ssb-server itself is the published preset, but we list the plugins explicitly
 // so the configuration is auditable.
 const createServer = SecretStack({
-  caps: {
-    // Standard SSB shs caps key — same value every SSB peer in the public network uses.
-    // (Override via env if running an isolated Aegis test net.)
-    shs:
+  // secret-stack@8 renamed caps.shs -> global.appKey. Standard SSB shs caps
+  // key — same value every SSB peer in the public network uses.
+  // (Override via env if running an isolated Aegis test net.)
+  global: {
+    appKey:
       process.env.AEGIS_SHS_CAP ||
       '1KHLiKZvAvjbY1ziZEHMXawbCEIM6qwjCDm3VYRan/s=',
   },
