@@ -9,6 +9,7 @@
  * list so it's always reachable.
  */
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { formatRelative } from "@/lib/scribe";
@@ -30,19 +31,14 @@ export function NoteList({
   return (
     <div className="flex flex-col border-r-2 border-foreground">
       <div className="border-b-2 border-foreground bg-background p-3">
-        <button
+        <Button
           type="button"
           onClick={onCreate}
           disabled={creating}
-          className={cn(
-            "w-full border-2 border-foreground bg-foreground px-3 py-2 text-sm font-bold uppercase tracking-wide text-background transition-transform",
-            "hover:translate-x-0.5 hover:translate-y-0.5",
-            "disabled:cursor-not-allowed disabled:opacity-50",
-            "shadow-[var(--shadow-brutal)]",
-          )}
+          className="w-full font-bold uppercase tracking-wide"
         >
           {creating ? "Creating…" : "+ New note"}
-        </button>
+        </Button>
       </div>
       {notes.length === 0 ? (
         <div className="text-muted-foreground p-4 text-sm">

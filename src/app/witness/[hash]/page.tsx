@@ -80,6 +80,7 @@ function WitnessProof({ rawHash }: { rawHash: string }) {
               ? "Could not normalize the hash."
               : "The hash in the URL is not a 64-char hex SHA-256."
           }
+          spot="witness"
         />
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
           <p className="text-muted-foreground font-mono text-sm break-all">
@@ -109,6 +110,7 @@ function WitnessProof({ rawHash }: { rawHash: string }) {
         eyebrow="Phase 4"
         title="Witness — verify"
         description="Checking the signature and per-network presence for this anchor."
+        spot="witness"
       />
       <div className="flex items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-3 sm:px-6">
         <NetworkStatusBadges status={status} />

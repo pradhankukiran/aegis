@@ -96,6 +96,7 @@ export default function CrucibleSourcePage() {
         eyebrow="Phase 5"
         title="Crucible"
         description="Anonymous source drop. Your submission is encrypted to the newsroom&apos;s key in your browser, uploaded to IPFS, and announced across three independent networks."
+        spot="crucible"
       />
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-3 sm:px-6">
         <TorIndicator />

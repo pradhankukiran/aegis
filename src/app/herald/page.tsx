@@ -60,6 +60,7 @@ export default function HeraldPage() {
           eyebrow="Phase 3"
           title="Herald"
           description="Loading identity…"
+          spot="herald"
         />
         <div className="flex-1" />
       </main>
@@ -75,6 +76,7 @@ export default function HeraldPage() {
           eyebrow="Phase 3"
           title="Herald"
           description="Real-time end-to-end encrypted chat across Matrix, Nostr, and SSB."
+          spot="herald"
         />
         <IdentityPanel identity={null} onGenerate={generate} />
       </main>
@@ -150,6 +152,7 @@ function HeraldChat({
         eyebrow="Phase 3"
         title="Herald"
         description={`You are ${truncatePubkey(pubkeyHex(identity))} · end-to-end encrypted across Matrix, Nostr, and SSB.`}
+        spot="herald"
       />
       <div className="flex items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-3 sm:px-6">
         <NetworkStatusBadges status={status} />

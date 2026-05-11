@@ -90,6 +90,7 @@ export default function AtlasPage() {
           eyebrow="Phase 4"
           title="Atlas"
           description="Loading identity…"
+          spot="atlas"
         />
         <div className="flex-1" />
       </main>
@@ -105,6 +106,7 @@ export default function AtlasPage() {
           eyebrow="Phase 4"
           title="Atlas"
           description="Encrypted live location sharing with a trusted circle."
+          spot="atlas"
         />
         <IdentityRequired onGenerate={generate} />
       </main>
@@ -158,6 +160,7 @@ function AtlasShell({
         eyebrow="Phase 4"
         title="Atlas"
         description={`You are ${truncatePubkey(pubkeyHex(identity))} · live location encrypted per-recipient over the three-network mesh.`}
+        spot="atlas"
       />
       <div className="flex items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-2 sm:px-6">
         <PermissionState state={permission} />

@@ -55,6 +55,7 @@ export default function WitnessPage() {
           eyebrow="Phase 4"
           title="Witness"
           description="Loading identity…"
+          spot="witness"
         />
         <div className="flex-1" />
       </main>
@@ -70,6 +71,7 @@ export default function WitnessPage() {
           eyebrow="Phase 4"
           title="Witness"
           description="Multi-network file notary. Anchor a SHA-256 + signature on Nostr, Matrix, and SSB simultaneously."
+          spot="witness"
         />
         <IdentityPanel identity={null} onGenerate={generate} />
       </main>
@@ -112,6 +114,7 @@ function WitnessAnchor({ identity }: { identity: Identity }) {
         eyebrow="Phase 4"
         title="Witness"
         description={`You are ${truncatePubkey(pubkeyHex(identity))} · drop a file to anchor it across Matrix, Nostr, and SSB.`}
+        spot="witness"
       />
       <div className="flex items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-3 sm:px-6">
         <NetworkStatusBadges status={status} />

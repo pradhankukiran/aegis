@@ -68,6 +68,7 @@ export default function BeaconPage() {
           eyebrow="Phase 5"
           title="Beacon"
           description="Loading identity…"
+          spot="beacon"
         />
         <div className="flex-1" />
       </main>
@@ -83,6 +84,7 @@ export default function BeaconPage() {
           eyebrow="Phase 5"
           title="Beacon"
           description="Emergency dead-man's broadcast — pre-encoded message that fires across all three networks when you fail to check in past a deadline."
+          spot="beacon"
         />
         <IdentityPanel identity={null} onGenerate={generate} />
       </main>
@@ -177,6 +179,7 @@ function BeaconWorkspace({ identity }: { identity: Identity }) {
         eyebrow="Phase 5"
         title="Beacon"
         description={`You are ${truncatePubkey(pubkeyHex(identity))} · dead-man's broadcast across Matrix, Nostr, and SSB.`}
+        spot="beacon"
       />
       <div className="flex items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-3 sm:px-6">
         <NetworkStatusBadges status={status} />

@@ -67,6 +67,7 @@ function QuorumDetail({ pollId }: { pollId: string }) {
           eyebrow="Phase 5"
           title="Poll"
           description="Loading identity…"
+          spot="quorum"
         />
         <div className="flex-1" />
       </main>
@@ -82,6 +83,7 @@ function QuorumDetail({ pollId }: { pollId: string }) {
           eyebrow="Phase 5"
           title="Poll"
           description="Generate an Aegis identity to participate."
+          spot="quorum"
         />
         <IdentityRequired onGenerate={generate} />
       </main>
@@ -146,6 +148,7 @@ function QuorumDetailShell({
           eyebrow="Phase 5"
           title="Poll"
           description="Looking for this poll on the three-network mesh…"
+          spot="quorum"
         />
         <div className="flex flex-1 items-center justify-center p-6">
           <Card className="w-full max-w-xl shadow-[var(--shadow-brutal-xl)]">
@@ -163,12 +166,14 @@ function QuorumDetailShell({
               <p className="text-muted-foreground font-mono text-xs">
                 id {pollId}
               </p>
-              <Link
-                href="/quorum"
-                className="inline-flex h-8 items-center gap-1.5 self-start border-2 border-foreground bg-background px-2.5 text-sm font-bold uppercase tracking-wide shadow-[var(--shadow-brutal)]"
+              <Button
+                asChild
+                variant="neutral"
+                size="sm"
+                className="self-start"
               >
-                ← Back to polls
-              </Link>
+                <Link href="/quorum">← Back to polls</Link>
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -196,6 +201,7 @@ function QuorumDetailShell({
         eyebrow="Phase 5"
         title="Poll"
         description="Pre-close: seal a ballot. Post-close: tally is computed from the revealed drand round."
+        spot="quorum"
       />
       <PollHeader poll={poll} now={now} />
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-2 sm:px-6">

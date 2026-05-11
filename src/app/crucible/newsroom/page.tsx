@@ -58,6 +58,7 @@ export default function CrucibleNewsroomPage() {
           eyebrow="Phase 5"
           title="Crucible · Newsroom"
           description="Loading identity…"
+          spot="crucible"
         />
         <div className="flex-1" />
       </main>
@@ -73,6 +74,7 @@ export default function CrucibleNewsroomPage() {
           eyebrow="Phase 5"
           title="Crucible · Newsroom"
           description="Receive encrypted whistleblower drops sealed to your Aegis identity, replicated across three networks."
+          spot="crucible"
         />
         <IdentityPanel identity={null} onGenerate={generate} />
       </main>
@@ -102,6 +104,7 @@ function NewsroomShell({ identity }: { identity: Identity }) {
         eyebrow="Phase 5"
         title="Crucible · Newsroom"
         description={`You are ${truncatePubkey(pubkeyHex(identity))} · decrypting drops sealed to your public key, fanned in across Matrix, Nostr, and SSB.`}
+        spot="crucible"
       />
       <div className="flex items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-3 sm:px-6">
         <p className="font-mono text-[10px] font-bold uppercase tracking-widest">

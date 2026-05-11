@@ -54,6 +54,7 @@ export default function QuorumPage() {
           eyebrow="Phase 5"
           title="Quorum"
           description="Loading identity…"
+          spot="quorum"
         />
         <div className="flex-1" />
       </main>
@@ -69,6 +70,7 @@ export default function QuorumPage() {
           eyebrow="Phase 5"
           title="Quorum"
           description="Sealed-ballot voting. Every vote is timelock-encrypted to the close round — nobody (including the poll creator) sees a single ballot until after close."
+          spot="quorum"
         />
         <IdentityRequired onGenerate={generate} />
       </main>
@@ -104,6 +106,7 @@ function QuorumShell({ identity }: { identity: Identity }) {
         eyebrow="Phase 5"
         title="Quorum"
         description={`You are ${truncatePubkey(myPubkey)} · ballots are timelock-encrypted to a drand quicknet round and tallied after close.`}
+        spot="quorum"
       />
       <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-3 sm:px-6">
         <p className="font-mono text-[10px] uppercase tracking-widest">
@@ -113,12 +116,9 @@ function QuorumShell({ identity }: { identity: Identity }) {
             {polls.length} poll{polls.length === 1 ? "" : "s"}
           </span>
         </p>
-        <Link
-          href="/quorum/new"
-          className="inline-flex h-8 items-center gap-1.5 bg-foreground px-2.5 text-sm font-bold uppercase tracking-wide text-background shadow-[var(--shadow-brutal)] transition-all hover:translate-x-0.5 hover:translate-y-0.5"
-        >
-          + Create poll
-        </Link>
+        <Button asChild size="sm" className="font-bold uppercase tracking-wide">
+          <Link href="/quorum/new">+ Create poll</Link>
+        </Button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <PollList polls={polls} myPubkey={myPubkey} now={now} />

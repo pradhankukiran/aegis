@@ -43,6 +43,7 @@ export default function QuorumNewPage() {
           eyebrow="Phase 5"
           title="New poll"
           description="Loading identity…"
+          spot="quorum"
         />
         <div className="flex-1" />
       </main>
@@ -58,6 +59,7 @@ export default function QuorumNewPage() {
           eyebrow="Phase 5"
           title="New poll"
           description="Generate an Aegis identity to sign your poll."
+          spot="quorum"
         />
         <IdentityRequired onGenerate={generate} />
       </main>
@@ -79,6 +81,7 @@ function QuorumNewShell({ identity }: { identity: Identity }) {
         eyebrow="Phase 5"
         title="New poll"
         description="Compose a sealed-ballot poll. The close time projects to a drand quicknet round; ballots are timelock-encrypted to that round."
+        spot="quorum"
       />
       <div className="flex items-center justify-between border-b-2 border-foreground bg-background px-4 py-3 sm:px-6">
         <p className="font-mono text-[10px] uppercase tracking-widest">

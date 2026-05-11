@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -133,14 +134,15 @@ export function NoteEditor({
               id {note.id.slice(0, 8)}
             </span>
           ) : null}
-          <button
+          <Button
             type="button"
             onClick={handleSave}
             disabled={!isDirty || saving || disabled}
-            className="border-2 border-foreground bg-foreground px-3 py-1 font-bold uppercase tracking-wide text-background transition-transform hover:translate-x-0.5 hover:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+            size="sm"
+            className="font-bold uppercase tracking-wide"
           >
             {saving ? "Saving…" : "Save"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

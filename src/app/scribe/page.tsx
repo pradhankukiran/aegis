@@ -58,6 +58,7 @@ export default function ScribePage() {
           eyebrow="Phase 4"
           title="Scribe"
           description="Loading identity…"
+          spot="scribe"
         />
         <div className="flex-1" />
       </main>
@@ -73,6 +74,7 @@ export default function ScribePage() {
           eyebrow="Phase 4"
           title="Scribe"
           description="Encrypted notes — personal first, shareable later."
+          spot="scribe"
         />
         <IdentityPanel identity={null} onGenerate={generate} />
       </main>
@@ -152,6 +154,7 @@ function ScribeWorkspace({ identity }: { identity: Identity }) {
         eyebrow="Phase 4"
         title="Scribe"
         description={`You are ${truncatePubkey(pubkeyHex(identity))} · encrypted notes at rest, shareable via Matrix.`}
+        spot="scribe"
       />
       <div className="grid flex-1 grid-cols-1 overflow-hidden md:grid-cols-[280px_1fr]">
         <NoteList
