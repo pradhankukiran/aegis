@@ -7,8 +7,8 @@ import { FeatureCard, type Feature } from "./FeatureCard";
  * Beacon → Quorum → Crucible). One pubkey, one transport, seven surfaces.
  *
  * Grid: 1 col on mobile, 2 on md, 3 on lg, 4 on xl. Seven cards land
- * cleanly in those breakpoints — last row has a half-empty slot we let
- * breathe as a deliberate brutalist gutter.
+ * cleanly in those breakpoints — the last row's half-empty slot is
+ * deliberate brutalist gutter.
  */
 const FEATURES: ReadonlyArray<Feature> = [
   {
@@ -72,23 +72,33 @@ const FEATURES: ReadonlyArray<Feature> = [
 export function FeatureRoster() {
   return (
     <section
+      id="features"
       aria-labelledby="roster-heading"
-      className="border-b-2 border-foreground bg-background"
+      className="scroll-mt-24 border-b-4 border-foreground bg-background"
     >
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12 sm:px-6 sm:py-16 lg:px-12">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2
-            id="roster-heading"
-            className="text-3xl font-black tracking-tighter uppercase sm:text-4xl"
-          >
-            Seven features. One identity.
-          </h2>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-14 sm:px-6 sm:py-20 lg:px-12">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <p className="text-muted-foreground font-mono text-[11px] font-bold uppercase tracking-widest sm:text-xs">
+              07 features · one identity
+            </p>
+            <h2
+              id="roster-heading"
+              className="text-3xl font-black tracking-tighter uppercase sm:text-4xl md:text-5xl"
+            >
+              Seven features.
+              <br className="hidden sm:inline" />
+              <span className="bg-main text-main-foreground inline-block border-2 border-foreground px-2 py-0.5 sm:px-3">
+                One pubkey.
+              </span>
+            </h2>
+          </div>
           <p className="text-muted-foreground font-mono text-[11px] font-bold uppercase tracking-widest sm:text-xs">
-            Same pubkey · Same crypto · Same transport
+            Same crypto · Same transport · Same key
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {FEATURES.map((f) => (
             <FeatureCard key={f.href} feature={f} />
           ))}
