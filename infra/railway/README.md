@@ -74,7 +74,7 @@ NEXT_PUBLIC_AEGIS_SSB_URL=wss://<ssb-pub-railway-url>
 Notes:
 - `wss://`, not `https://`, for the SSB URL — it's a WebSocket.
 - No `/aegis-ws` path suffix. Caddy did that routing in the self-hosted setup; on Railway, the `ssb-pub` service answers WebSocket at root.
-- If you also want clients to use your Nostr relay, add `NEXT_PUBLIC_AEGIS_NOSTR_RELAY=wss://<strfry-railway-url>` — otherwise clients fall back to public Nostr relays.
+- The strfry relay you deployed is reachable at `wss://<strfry-railway-url>`, but there's no env var wired to swap in a custom Nostr relay yet — clients use the hardcoded public-relay defaults in `src/lib/transport/nostr.ts`. To use your own relay, either edit those defaults or pass a `relays` array to `NostrTransport.connect()` in feature code.
 
 ## Done
 
