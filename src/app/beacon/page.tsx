@@ -178,7 +178,7 @@ function BeaconWorkspace({ identity }: { identity: Identity }) {
         icon={Radio}
         eyebrow="Phase 5"
         title="Beacon"
-        description={`You are ${truncatePubkey(pubkeyHex(identity))} · dead-man's broadcast across Matrix, Nostr, and SSB.`}
+        description={`You are ${truncatePubkey(pubkeyHex(identity))} · dead-man's broadcast across Matrix and Nostr.`}
         spot="beacon"
       />
       <div className="flex items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-3 sm:px-6">

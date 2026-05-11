@@ -75,7 +75,7 @@ export default function HeraldPage() {
           icon={MessageSquare}
           eyebrow="Phase 3"
           title="Herald"
-          description="Real-time end-to-end encrypted chat across Matrix, Nostr, and SSB."
+          description="Real-time end-to-end encrypted chat across Matrix and Nostr."
           spot="herald"
         />
         <IdentityPanel identity={null} onGenerate={generate} />
@@ -151,7 +151,7 @@ function HeraldChat({
         icon={MessageSquare}
         eyebrow="Phase 3"
         title="Herald"
-        description={`You are ${truncatePubkey(pubkeyHex(identity))} · end-to-end encrypted across Matrix, Nostr, and SSB.`}
+        description={`You are ${truncatePubkey(pubkeyHex(identity))} · end-to-end encrypted across Matrix and Nostr.`}
         spot="herald"
       />
       <div className="flex items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-3 sm:px-6">

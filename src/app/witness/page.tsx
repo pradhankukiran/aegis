@@ -70,7 +70,7 @@ export default function WitnessPage() {
           icon={FileCheck2}
           eyebrow="Phase 4"
           title="Witness"
-          description="Multi-network file notary. Anchor a SHA-256 + signature on Nostr, Matrix, and SSB simultaneously."
+          description="Multi-network file notary. Anchor a SHA-256 + signature on Nostr and Matrix simultaneously."
           spot="witness"
         />
         <IdentityPanel identity={null} onGenerate={generate} />
@@ -113,7 +113,7 @@ function WitnessAnchor({ identity }: { identity: Identity }) {
         icon={FileCheck2}
         eyebrow="Phase 4"
         title="Witness"
-        description={`You are ${truncatePubkey(pubkeyHex(identity))} · drop a file to anchor it across Matrix, Nostr, and SSB.`}
+        description={`You are ${truncatePubkey(pubkeyHex(identity))} · drop a file to anchor it across Matrix and Nostr.`}
         spot="witness"
       />
       <div className="flex items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-3 sm:px-6">
@@ -121,7 +121,7 @@ function WitnessAnchor({ identity }: { identity: Identity }) {
         <p className="text-muted-foreground font-mono text-[10px] uppercase tracking-widest">
           {composeDisabled
             ? "connecting…"
-            : `${countConnected(status)}/3 networks ready`}
+            : `${countConnected(status)}/2 networks ready`}
         </p>
       </div>
 
@@ -168,11 +168,9 @@ function WitnessAnchor({ identity }: { identity: Identity }) {
 function countConnected(status: {
   nostr: boolean | null;
   matrix: boolean | null;
-  ssb: boolean | null;
 }): number {
   let n = 0;
   if (status.nostr === true) n += 1;
   if (status.matrix === true) n += 1;
-  if (status.ssb === true) n += 1;
   return n;
 }

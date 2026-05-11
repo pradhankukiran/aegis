@@ -16,14 +16,13 @@ import { cn } from "@/lib/utils";
 
 import type { TransportStatus } from "@/lib/herald";
 
-type Network = "nostr" | "matrix" | "ssb";
+type Network = "nostr" | "matrix";
 
 export function NetworkStatusBadges({ status }: { status: TransportStatus }) {
   return (
     <div className="flex items-center gap-2">
       <Badge name="nostr" state={status.nostr} />
       <Badge name="matrix" state={status.matrix} />
-      <Badge name="ssb" state={status.ssb} />
     </div>
   );
 }

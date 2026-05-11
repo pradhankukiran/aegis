@@ -24,7 +24,7 @@ const FEATURES: ReadonlyArray<Feature> = [
     codename: "SCRIBE",
     tagline: "Encrypted notes",
     description:
-      "Personal and collaborative. SSB feed log for your private notes, Y.js CRDT over Matrix for shared documents.",
+      "Personal and collaborative. Private notes stay local-first, Y.js CRDT over Matrix for shared documents.",
     href: "/scribe",
   },
   {
@@ -32,7 +32,7 @@ const FEATURES: ReadonlyArray<Feature> = [
     codename: "ATLAS",
     tagline: "Live location sharing",
     description:
-      "Encrypted position fixes to a chosen circle. SSB peer-mesh takes over when cell signal drops.",
+      "Encrypted position fixes to a chosen circle. Matrix DM fallback covers low-connectivity peers.",
     href: "/atlas",
   },
   {

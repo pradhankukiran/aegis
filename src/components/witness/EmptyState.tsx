@@ -20,12 +20,12 @@ export function EmptyState() {
         <CardContent className="flex flex-col gap-4">
           <p className="text-sm leading-relaxed">
             Witness computes a SHA-256 fingerprint of your file, signs it
-            with your Aegis identity, and broadcasts the proof across Nostr,
-            Matrix, and SSB simultaneously.
+            with your Aegis identity, and broadcasts the proof across Nostr
+            and Matrix simultaneously.
           </p>
           <p className="text-muted-foreground text-sm leading-relaxed">
             Anyone with the resulting proof URL can verify the timestamp
-            against all three networks. An adversary would need to compromise
+            against both networks. An adversary would need to compromise
             every one of them to deny it.
           </p>
           <p className="text-muted-foreground text-sm leading-relaxed">

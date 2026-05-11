@@ -24,7 +24,7 @@
  * the source side is no identity). So we generate a NEW ephemeral
  * identity at mount time, hand it to the transport, and never persist
  * it. This means each browser tab that visits `/crucible` looks like a
- * different Nostr sender / SSB feed / Matrix MXID — exactly the kind
+ * different Nostr sender / Matrix MXID — exactly the kind
  * of metadata posture an anonymous source wants.
  *
  * That throwaway transport identity is distinct from the per-drop

@@ -58,7 +58,7 @@ export function Hero() {
           <p className="max-w-2xl text-xl font-medium leading-tight tracking-tight sm:text-2xl md:text-3xl">
             <span className="font-black">Pubkey identity</span>.{" "}
             <span className="font-black">End-to-end encryption</span>.{" "}
-            <span className="font-black">Three independent networks.</span>{" "}
+            <span className="font-black">Two independent networks.</span>{" "}
             <span className="text-muted-foreground">
               No single adversary can take you off the air.
             </span>
@@ -91,10 +91,10 @@ export function Hero() {
           </div>
           <dl className="divide-y-2 divide-foreground">
             <StatRow label="features" value="07" />
-            <StatRow label="transports" value="03" />
-            <StatRow label="tests passing" value="403 / 403" />
+            <StatRow label="transports" value="02" />
+            <StatRow label="tests passing" value="392 / 392" />
             <StatRow label="identity" value="secp256k1" />
-            <StatRow label="encryption" value="olm · nip-44 · ssb" />
+            <StatRow label="encryption" value="olm · nip-44" />
           </dl>
         </Card>
       </div>

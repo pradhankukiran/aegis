@@ -33,7 +33,7 @@ import type { CircleMember, ReceivedFix } from "@/lib/atlas";
  * its bottom-center so the bottom edge points at the actual coordinate
  * (consistent with how pin icons traditionally anchor).
  *
- * Pubkey input forms (Matrix MXID, SSB feed id) get formatted
+ * Pubkey input forms (Matrix MXID) get formatted
  * differently in `truncatePubkey` (it short-circuits on length ≤ 12);
  * the function falls back gracefully so a non-hex `from` still renders
  * something readable.

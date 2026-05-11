@@ -59,7 +59,7 @@ export function ComposeBox({
       />
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground font-mono text-[10px] uppercase tracking-wider">
-          end-to-end encrypted via matrix · nostr · ssb
+          end-to-end encrypted via matrix · nostr
         </p>
         <Button
           type="button"

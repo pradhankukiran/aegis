@@ -40,9 +40,8 @@ export function PollList({
         </p>
         <p className="max-w-xl text-sm leading-relaxed">
           Create one with the button above. Polls you create are fanned out
-          across Nostr, Matrix, and SSB; polls your peers create surface
-          here automatically when their event lands on any connected
-          network.
+          across Nostr and Matrix; polls your peers create surface here
+          automatically when their event lands on any connected network.
         </p>
       </Card>
     );

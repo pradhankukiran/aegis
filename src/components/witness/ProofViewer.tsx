@@ -149,9 +149,9 @@ function VerdictCard({
     title = "Verification error";
     body = error;
   } else if (fully) {
-    title = "Verified on 3 / 3 networks";
+    title = "Verified on 2 / 2 networks";
     body =
-      "Signature is valid and the anchor is present on Nostr, Matrix, and SSB.";
+      "Signature is valid and the anchor is present on Nostr and Matrix.";
   } else if (overall) {
     title = "Verified";
     body =
@@ -205,7 +205,6 @@ function NetworkRows({
   const fallback: NetworkVerification[] = [
     { network: "nostr", found: false },
     { network: "matrix", found: false },
-    { network: "ssb", found: false },
   ];
   const rows = verification?.networks ?? fallback;
   return (

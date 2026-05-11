@@ -103,7 +103,7 @@ function NewsroomShell({ identity }: { identity: Identity }) {
         icon={Siren}
         eyebrow="Phase 5"
         title="Crucible · Newsroom"
-        description={`You are ${truncatePubkey(pubkeyHex(identity))} · decrypting drops sealed to your public key, fanned in across Matrix, Nostr, and SSB.`}
+        description={`You are ${truncatePubkey(pubkeyHex(identity))} · decrypting drops sealed to your public key, fanned in across Matrix and Nostr.`}
         spot="crucible"
       />
       <div className="flex items-center justify-between gap-3 border-b-2 border-foreground bg-background px-4 py-3 sm:px-6">

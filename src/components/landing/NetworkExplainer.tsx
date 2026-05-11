@@ -1,4 +1,4 @@
-import { Radio, Lock, GitBranch, type LucideIcon } from "lucide-react";
+import { Radio, Lock, type LucideIcon } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 
@@ -11,11 +11,17 @@ type Network = {
 };
 
 /**
- * NetworkExplainer — the "three networks, one identity" section.
+ * NetworkExplainer — the "two networks, one identity" section.
  *
- * One big outer brutalist Card holding three inner columns. The closing
+ * One big outer brutalist Card holding two inner columns. The closing
  * callout strip flips to bg-main (electric blue) so the resilience
  * argument terminates the section with a visible spot of colour.
+ *
+ * SSB was a third leg in v1; the browser-bridge pub turned out to be
+ * unmaintainable, so the live deployment ships Matrix + Nostr only.
+ * Offline-mesh resilience (the original SSB story) is deferred — see
+ * `docs/architecture.md` for the history and the path back if a future
+ * peer-mesh primitive arrives.
  */
 const NETWORKS: ReadonlyArray<Network> = [
   {
@@ -34,14 +40,6 @@ const NETWORKS: ReadonlyArray<Network> = [
       "Production-grade end-to-end encryption (Olm / Megolm) via the Rust crypto stack. Forward secrecy and post-compromise security.",
     used: "1:1 DMs, group state, room membership.",
   },
-  {
-    name: "Scuttlebutt",
-    symbol: "03",
-    icon: GitBranch,
-    blurb:
-      "Offline-first, append-only, peer-to-peer gossip. No relays required — phones swap feeds directly when they meet.",
-    used: "Disaster mode, when networks are blocked or down.",
-  },
 ];
 
 export function NetworkExplainer() {
@@ -53,18 +51,18 @@ export function NetworkExplainer() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:px-12">
         <div className="flex flex-col gap-3">
           <p className="text-muted-foreground font-mono text-[11px] font-bold uppercase tracking-widest sm:text-xs">
-            03 transports
+            02 transports
           </p>
           <h2
             id="networks-heading"
             className="max-w-3xl text-3xl font-black tracking-tighter uppercase sm:text-4xl md:text-5xl"
           >
-            Three networks. One pubkey. No single point of failure.
+            Two networks. One pubkey. No single point of failure.
           </h2>
         </div>
 
         <Card className="gap-0 py-0">
-          <div className="grid grid-cols-1 divide-y-2 divide-foreground md:grid-cols-3 md:divide-y-0 md:divide-x-2">
+          <div className="grid grid-cols-1 divide-y-2 divide-foreground md:grid-cols-2 md:divide-y-0 md:divide-x-2">
             {NETWORKS.map((net) => {
               const Icon = net.icon;
               return (
@@ -77,7 +75,7 @@ export function NetworkExplainer() {
                       <Icon className="size-6 sm:size-7" strokeWidth={2.5} />
                     </div>
                     <span className="text-muted-foreground font-mono text-[11px] font-bold uppercase tracking-widest">
-                      {net.symbol} / 03
+                      {net.symbol} / 02
                     </span>
                   </div>
                   <h3 className="text-2xl font-black tracking-tighter uppercase sm:text-3xl">
@@ -104,10 +102,10 @@ export function NetworkExplainer() {
         <Card className="bg-main text-main-foreground gap-0 py-5 px-5 sm:py-6 sm:px-7">
           <p className="text-base leading-relaxed sm:text-lg md:text-xl">
             <span className="font-black uppercase tracking-tight">
-              Three transports. One identity.
+              Two transports. One identity.
             </span>{" "}
-            Take down one, the other two still deliver. Block one country,
-            peers in others still gossip.
+            Take down one, the other still delivers. Block one country,
+            peers in others still see your events.
           </p>
         </Card>
       </div>
