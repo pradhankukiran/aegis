@@ -49,7 +49,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libssl3 \
         zlib1g \
         liblmdb0 \
-        libflatbuffers23.5.26 \
+        libflatbuffers2 \
         libsecp256k1-1 \
         libzstd1 \
     && rm -rf /var/lib/apt/lists/*
