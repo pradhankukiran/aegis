@@ -72,7 +72,7 @@ export function NewsroomDashboard({
           <div className="flex gap-2">
             <Button
               type="button"
-              variant={unreadOnly ? "default" : "outline"}
+              variant={unreadOnly ? "default" : "neutral"}
               size="xs"
               onClick={() => setUnreadOnly((v) => !v)}
             >

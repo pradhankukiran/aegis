@@ -65,7 +65,7 @@ export function ShareToggle({
       {active ? (
         <Button
           type="button"
-          variant="outline"
+          variant="neutral"
           onClick={onStop}
           className="shadow-[var(--shadow-brutal)]"
         >

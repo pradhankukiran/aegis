@@ -89,7 +89,7 @@ function WitnessProof({ rawHash }: { rawHash: string }) {
             <Link href="/witness">
               <Button
                 type="button"
-                variant="outline"
+                variant="neutral"
                 className="shadow-[var(--shadow-brutal)]"
               >
                 Back to Witness
@@ -115,7 +115,7 @@ function WitnessProof({ rawHash }: { rawHash: string }) {
         <Link href="/witness">
           <Button
             type="button"
-            variant="outline"
+            variant="neutral"
             size="sm"
             className="shadow-[var(--shadow-brutal)]"
           >

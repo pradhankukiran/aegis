@@ -184,7 +184,7 @@ export function CreatePollForm({
               <Button
                 type="button"
                 size="xs"
-                variant="outline"
+                variant="neutral"
                 onClick={() => removeOption(i)}
                 disabled={formDisabled || options.length <= MIN_OPTIONS}
                 aria-label={`remove option ${i + 1}`}
@@ -197,7 +197,7 @@ export function CreatePollForm({
         <Button
           type="button"
           size="xs"
-          variant="outline"
+          variant="neutral"
           onClick={addOption}
           disabled={formDisabled || options.length >= MAX_OPTIONS}
           className="mt-2 shadow-[var(--shadow-brutal)]"

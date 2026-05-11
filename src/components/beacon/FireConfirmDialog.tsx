@@ -42,7 +42,7 @@ export function FireConfirmDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="outline"
+          variant="neutral"
           className="shadow-[var(--shadow-brutal)]"
         >
           Trigger now (test)
@@ -71,7 +71,7 @@ export function FireConfirmDialog({
         <div className="flex justify-end gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="neutral"
             disabled={isWorking}
             onClick={() => setOpen(false)}
           >

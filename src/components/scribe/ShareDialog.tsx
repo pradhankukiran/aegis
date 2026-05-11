@@ -56,7 +56,7 @@ export function ShareDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="outline"
+          variant="neutral"
           disabled={disabled}
           className="shadow-[var(--shadow-brutal)]"
         >
@@ -122,7 +122,7 @@ export function ShareDialog({
             <>
               <Button
                 type="button"
-                variant="outline"
+                variant="neutral"
                 onClick={() => setOpen(false)}
                 disabled={sharing}
               >

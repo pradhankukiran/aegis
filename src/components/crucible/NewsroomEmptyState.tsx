@@ -106,7 +106,7 @@ function CopyBlock({
         </code>
         <Button
           type="button"
-          variant="outline"
+          variant="neutral"
           onClick={() => {
             void copy();
           }}

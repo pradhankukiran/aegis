@@ -134,7 +134,7 @@ export function BeaconDetail({
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="neutral"
                 onClick={handleCancel}
                 disabled={cancelling}
                 className="shadow-[var(--shadow-brutal)]"
@@ -150,7 +150,7 @@ export function BeaconDetail({
           ) : (
             <Button
               type="button"
-              variant="outline"
+              variant="neutral"
               onClick={handleDelete}
               disabled={deleting}
               className="shadow-[var(--shadow-brutal)]"

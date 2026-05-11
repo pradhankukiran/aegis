@@ -126,7 +126,7 @@ export function FileDropzone({
       </p>
       <Button
         type="button"
-        variant="outline"
+        variant="neutral"
         disabled={disabled || working}
         onClick={(e) => {
           e.stopPropagation();

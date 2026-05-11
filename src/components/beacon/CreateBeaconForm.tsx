@@ -114,7 +114,7 @@ export function CreateBeaconForm({
     >
       <DialogTrigger asChild>
         <Button
-          variant="outline"
+          variant="neutral"
           className="shadow-[var(--shadow-brutal)]"
         >
           + New beacon
@@ -213,7 +213,7 @@ export function CreateBeaconForm({
         <div className="flex justify-end gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="neutral"
             disabled={isWorking}
             onClick={() => {
               setOpen(false);

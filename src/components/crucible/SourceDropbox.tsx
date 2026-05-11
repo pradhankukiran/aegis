@@ -164,7 +164,7 @@ export function SourceDropbox(props: SourceDropboxProps) {
                 />
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="neutral"
                   size="lg"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={working}
@@ -180,7 +180,7 @@ export function SourceDropbox(props: SourceDropboxProps) {
                     </p>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="neutral"
                       size="sm"
                       onClick={clearFile}
                       disabled={working}

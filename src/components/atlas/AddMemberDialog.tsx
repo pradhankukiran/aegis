@@ -64,7 +64,7 @@ export function AddMemberDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="outline"
+          variant="neutral"
           size="xs"
           className="shadow-[var(--shadow-brutal)]"
         >
@@ -137,7 +137,7 @@ export function AddMemberDialog({
         <div className="flex justify-end gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="neutral"
             disabled={busy}
             onClick={() => {
               setOpen(false);

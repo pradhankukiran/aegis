@@ -158,7 +158,7 @@ function CopyRow({
         </code>
         <Button
           type="button"
-          variant="outline"
+          variant="neutral"
           size="lg"
           onClick={() => {
             void copy();

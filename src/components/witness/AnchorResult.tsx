@@ -152,7 +152,7 @@ function FieldCopy({
         </p>
         <Button
           type="button"
-          variant="outline"
+          variant="neutral"
           size="sm"
           onClick={() => {
             void copy();

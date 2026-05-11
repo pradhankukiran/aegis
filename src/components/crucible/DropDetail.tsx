@@ -49,7 +49,7 @@ export function DropDetail({
           </p>
           <Button
             type="button"
-            variant={drop.read ? "ghost" : "outline"}
+            variant={drop.read ? "neutral" : "default"}
             size="sm"
             onClick={() => {
               void onMarkRead(drop.id);
@@ -113,7 +113,7 @@ export function DropDetail({
                 </div>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="neutral"
                   size="sm"
                   onClick={() => onDownload(att)}
                 >

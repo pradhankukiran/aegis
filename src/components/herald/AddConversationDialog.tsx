@@ -61,7 +61,7 @@ export function AddConversationDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="outline"
+          variant="neutral"
           className="shadow-[var(--shadow-brutal)]"
         >
           + Add conversation
@@ -104,7 +104,7 @@ export function AddConversationDialog({
         <div className="flex justify-end gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="neutral"
             disabled={busy}
             onClick={() => {
               setOpen(false);

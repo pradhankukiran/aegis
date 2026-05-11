@@ -75,7 +75,7 @@ export function CirclePanel({
                   <Button
                     type="button"
                     size="xs"
-                    variant="outline"
+                    variant="neutral"
                     onClick={() => {
                       void onRemove(m.pubkey);
                     }}

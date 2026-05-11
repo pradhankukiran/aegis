@@ -110,7 +110,7 @@ export function ProofViewer({
             <div className="flex justify-end">
               <Button
                 type="button"
-                variant="outline"
+                variant="neutral"
                 size="sm"
                 onClick={onRefresh}
                 disabled={isLoading}
@@ -334,7 +334,7 @@ function FieldCopy({
         </p>
         <Button
           type="button"
-          variant="outline"
+          variant="neutral"
           size="sm"
           onClick={() => {
             void copy();
