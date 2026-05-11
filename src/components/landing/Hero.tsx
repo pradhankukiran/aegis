@@ -5,6 +5,28 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 /**
+ * Angular shield — pure brutalist polygon, no curves. Same path lives in
+ * `src/app/icon.svg` for the favicon so the mark stays consistent across
+ * the tab icon and the hero.
+ */
+function ShieldMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      aria-hidden
+      className={className}
+    >
+      <path d="M12 2 L4 5 L4 12 L12 22 L20 12 L20 5 Z" />
+    </svg>
+  );
+}
+
+/**
  * Hero — top block of `/`. States in one breath what Aegis is, then puts
  * a single blue CTA in front of the visitor.
  *
@@ -21,6 +43,8 @@ export function Hero() {
     <section className="relative border-b-4 border-foreground bg-background">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.4fr_1fr] lg:gap-12 lg:px-12 lg:py-24">
         <div className="flex flex-col items-start gap-7">
+          <ShieldMark className="text-foreground size-16 sm:size-20 md:size-24" />
+
           <span className="bg-main text-main-foreground inline-flex items-center gap-2 border-2 border-foreground px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.22em] shadow-shadow sm:text-xs">
             <span aria-hidden className="size-1.5 bg-foreground" />
             decentralized everything-app
