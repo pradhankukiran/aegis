@@ -4,13 +4,12 @@
  * One `AegisTransport` instance owns one each of:
  *   - `NostrTransport`  (relay-based event log)
  *   - `MatrixTransport` (homeserver-based rooms + E2EE)
- *   - `SSBTransport`    (append-only feed bridged via ssb-pub)
  *
  * The facade exposes three primitives:
  *   - `publish(event)`         fan out across selected networks (default: all
  *                              that connected successfully).
  *   - `subscribe(filter, fn)`  cross-network aggregator with id-based dedup.
- *   - `directMessage(to, txt)` Matrix → Nostr → SSB fallback chain (plan §2 /
+ *   - `directMessage(to, txt)` Matrix → Nostr fallback chain (plan §2 /
  *                              aegis-plan.md §3.1).
  *
  * # AegisEvent id (the dedup key)
@@ -46,21 +45,20 @@
  * authored ourselves (no invites yet). Multi-author topic rooms are a
  * Phase 4 expansion — the inbound mapping below is forward-compatible.
  *
- * # SSB mapping (outbound)
- *
- * `ssb.publish({ type: "aegis-" + type, payload, tags })`. The SSB feed is
- * append-only and untagged — the SSB pub doesn't filter on tag, so any
- * forwarded `tags` are descriptive metadata only.
- *
  * # directMessage fallback chain
  *
  *   1. Matrix (encrypted DM room, recipient resolved from pubkey hex).
  *   2. Nostr  (NIP-44 v2 kind-14 DM).
- *   3. SSB    (publish-with-recipient-tag — SSB private boxes are deferred
- *              to Phase 4; plaintext content with a `to` field is the v1
- *              behaviour. See plan §2.).
  *
- * If all three fail, an aggregate error is thrown listing each failure.
+ * If both fail, an aggregate error is thrown listing each failure.
+ *
+ * # SSB
+ *
+ * SSB was a third leg in v1 but the browser-bridge pub turned out to be
+ * unmaintainable. The transport facade now ships with Matrix + Nostr only;
+ * offline-mesh resilience is deferred. The `infra/docker/ssb-pub/`
+ * directory is kept on disk so a future replacement can pick up where we
+ * left off, but nothing here references it.
  */
 
 import { sha256 } from "@noble/hashes/sha2.js";
@@ -70,14 +68,13 @@ import type { Identity } from "../identity";
 
 import { MatrixTransport } from "./matrix";
 import { NostrTransport } from "./nostr";
-import { SSBTransport, sealSsbDm } from "./ssb";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                       */
 /* -------------------------------------------------------------------------- */
 
 /** The set of underlying networks the facade knows about. */
-export type Network = "nostr" | "matrix" | "ssb";
+export type Network = "nostr" | "matrix";
 
 /**
  * Per-network configuration. A missing entry means "don't even try" — the
@@ -87,7 +84,6 @@ export type Network = "nostr" | "matrix" | "ssb";
 export type TransportConfig = {
   nostr?: { relays?: string[] };
   matrix?: { homeserver: string; registrationToken?: string };
-  ssb?: { pubUrl: string };
 };
 
 /** Caller-supplied event to publish across networks. */
@@ -100,7 +96,7 @@ export type AegisEventInput = {
   channels?: Network[];
   /**
    * Per-event tags. Forwarded to Nostr as raw `string[][]` tags, mapped onto
-   * Matrix room state in a future enhancement, ignored on SSB.
+   * Matrix room state in a future enhancement.
    */
   tags?: string[][];
 };
@@ -115,8 +111,7 @@ export type AegisEventInput = {
  * (`@xxxxxxxxxxxx:domain`) because we don't yet have an MXID → pubkey
  * resolver — the localpart is 24 hex chars derived from the sender's pubkey
  * (see `matrix.ts#deriveLocalpart`) but a one-way truncation, so we can't
- * recover the full pubkey at receive time. SSB-origin DMs carry the SSB
- * feed id (`@base64.ed25519`) for the same reason.
+ * recover the full pubkey at receive time.
  *
  * Herald's bridge therefore treats each `from` form as a separate addressing
  * space until Phase 4 wires up a directory lookup. The dedup id below
@@ -132,7 +127,6 @@ export type IncomingDM = {
    * Sender id in the origin network's canonical form:
    *  - nostr  → x-only 64-char hex
    *  - matrix → MXID string (`@localpart:domain`)
-   *  - ssb    → feed id (`@base64.ed25519`)
    */
   from: string;
   /** Decrypted message body. */
@@ -149,13 +143,13 @@ export type AegisEvent = {
   id: string;
   /** Which network we received this event from. */
   origin: Network;
-  /** Sender id (pubkey hex / mxid / ssb feed id), in the origin network's form. */
+  /** Sender id (pubkey hex / mxid), in the origin network's form. */
   sender: string;
   /** Logical Aegis event type. */
   type: string;
   /** Decoded payload. */
   content: unknown;
-  /** Unix seconds (network-supplied — Nostr `created_at`, Matrix `origin/1000`, SSB `timestamp/1000`). */
+  /** Unix seconds (network-supplied — Nostr `created_at`, Matrix `origin/1000`). */
   ts: number;
 };
 
@@ -164,10 +158,9 @@ export type AegisFilter = {
   /** Match the Aegis logical type exactly. */
   type?: string;
   /**
-   * Authors to accept (pubkey hex in Nostr x-only form). Each transport maps
-   * this onto its native id form — Matrix subscribers see all events and we
-   * post-filter; SSB subscribers honour the first author and post-filter the
-   * rest.
+   * Authors to accept (pubkey hex in Nostr x-only form). Matrix subscribers
+   * see all events and we post-filter; cross-network identity correlation
+   * is a Phase 4 expansion.
    */
   authors?: string[];
   /** Unix seconds (inclusive). */
@@ -180,7 +173,7 @@ export type AegisFilter = {
 export type PublishResult = {
   network: Network;
   ok: boolean;
-  /** Network-native id when `ok` (Nostr event id, Matrix event_id, SSB msg_id). */
+  /** Network-native id when `ok` (Nostr event id, Matrix event_id). */
   id?: string;
   /** Free-form reason on failure (or success info from the network). */
   reason?: string;
@@ -312,25 +305,17 @@ const MATRIX_EVENT_TYPE_PREFIX = "aegis.";
 /* Facade                                                                      */
 /* -------------------------------------------------------------------------- */
 
-type Connected = { nostr: boolean; matrix: boolean; ssb: boolean };
+type Connected = { nostr: boolean; matrix: boolean };
 
 export class AegisTransport {
   /** Per-transport accessors — feature code can drop into the native API. */
   public readonly nostr: NostrTransport;
   public readonly matrix: MatrixTransport;
-  public readonly ssb: SSBTransport;
 
   private readonly config: TransportConfig;
-  /**
-   * Stored so the SSB DM fallback can derive an ECDH CEK to encrypt the
-   * outbound payload (SEC-003). The seckey is the master identity's
-   * secp256k1 scalar; we never write or log it.
-   */
-  private readonly identity: Identity;
   private readonly connected: Connected = {
     nostr: false,
     matrix: false,
-    ssb: false,
   };
   /** Aegis logical type → Matrix room id, populated lazily on first publish. */
   private readonly matrixRoomByType: Map<string, string> = new Map();
@@ -339,7 +324,6 @@ export class AegisTransport {
    * `__deps` field. Kept off the public surface intentionally.
    */
   constructor(identity: Identity, config: TransportConfig, deps?: TransportDeps) {
-    this.identity = identity;
     this.config = config;
     this.nostr = deps?.nostr ?? new NostrTransport(identity);
     // MatrixTransport requires a homeserver URL up front. If the caller didn't
@@ -349,17 +333,13 @@ export class AegisTransport {
     const matrixHs =
       config.matrix?.homeserver ?? PLACEHOLDER_MATRIX_HOMESERVER;
     this.matrix = deps?.matrix ?? new MatrixTransport(identity, matrixHs);
-    // SSBTransport similarly requires a pubUrl; use a non-routable placeholder
-    // if the caller skipped SSB entirely.
-    const ssbUrl = config.ssb?.pubUrl ?? PLACEHOLDER_SSB_URL;
-    this.ssb = deps?.ssb ?? new SSBTransport(identity, ssbUrl);
   }
 
   /**
    * Open every configured network. Per-network connection runs in parallel
    * via `Promise.allSettled`; a network without config is skipped.
    *
-   * Returns a `{ nostr, matrix, ssb }` map of booleans — `true` means the
+   * Returns a `{ nostr, matrix }` map of booleans — `true` means the
    * connect call resolved without throwing AND, for Nostr, at least one
    * relay accepted the socket.
    */
@@ -388,18 +368,6 @@ export class AegisTransport {
           })
           .catch(() => {
             this.connected.matrix = false;
-          }),
-      );
-    }
-    if (this.config.ssb) {
-      tasks.push(
-        this.ssb
-          .connect()
-          .then(() => {
-            this.connected.ssb = true;
-          })
-          .catch(() => {
-            this.connected.ssb = false;
           }),
       );
     }
@@ -460,14 +428,6 @@ export class AegisTransport {
             });
             return { network, ok: true, id: eventId };
           }
-          case "ssb": {
-            const r = await this.ssb.publish({
-              type: "aegis-" + event.type,
-              payload: event.content,
-              tags: event.tags ?? [],
-            });
-            return { network, ok: true, id: r.id };
-          }
         }
       } catch (err) {
         return {
@@ -510,10 +470,9 @@ export class AegisTransport {
       if (filter.until && ev.ts > filter.until) return;
       if (filter.authors && filter.authors.length > 0) {
         // Author filtering uses the Nostr x-only pubkey hex as the canonical
-        // form. Matrix/SSB events come through unfiltered at this layer —
-        // upper layers map MXIDs / SSB ids back to Aegis pubkeys if they
-        // need cross-network identity correlation. For Phase 2 this is fine
-        // because each test/feature flow controls its own population.
+        // form. Matrix events come through unfiltered at this layer —
+        // upper layers map MXIDs back to Aegis pubkeys if they need
+        // cross-network identity correlation.
         if (ev.origin === "nostr" && !filter.authors.includes(ev.sender)) {
           return;
         }
@@ -528,10 +487,6 @@ export class AegisTransport {
     }
     if (this.isActive("matrix")) {
       const unsub = this.subscribeMatrix(filter, forward);
-      unsubs.push(unsub);
-    }
-    if (this.isActive("ssb")) {
-      const unsub = this.subscribeSsb(filter, forward);
       unsubs.push(unsub);
     }
 
@@ -600,17 +555,6 @@ export class AegisTransport {
         /* matrix not ready — skip */
       }
     }
-    if (this.isActive("ssb")) {
-      try {
-        unsubs.push(
-          this.ssb.subscribeIncomingDMs((dm) =>
-            forward(dm.from, dm.plaintext, dm.ts, "ssb"),
-          ),
-        );
-      } catch {
-        /* ssb not ready — skip */
-      }
-    }
 
     let closed = false;
     return () => {
@@ -629,7 +573,7 @@ export class AegisTransport {
   /**
    * Send a private message to another Aegis user using the fallback chain:
    *
-   *     Matrix DM (encrypted room) → Nostr NIP-44 v2 DM → SSB publish-with-tag.
+   *     Matrix DM (encrypted room) → Nostr NIP-44 v2 DM.
    *
    * Each step is attempted in order; the first success returns. If every
    * step fails, an aggregate error is thrown that lists every failure.
@@ -638,7 +582,6 @@ export class AegisTransport {
    * master Aegis identity pubkey. Each transport maps it to its native id:
    *   - Matrix: localpart derived via `mxidFromPubkeyHex`.
    *   - Nostr:  x-only 64-char hex (parity byte stripped).
-   *   - SSB:    plaintext `to` field on the message (boxes deferred).
    */
   async directMessage(
     toPubkey: string,
@@ -670,34 +613,6 @@ export class AegisTransport {
       failures.push("nostr: not connected");
     }
 
-    if (this.isActive("ssb")) {
-      try {
-        // SEC-003: encrypt the payload before publishing. SSB private boxes
-        // are deferred (plan §2); this gives us content confidentiality
-        // (everyone on the pub still sees author + recipient pubkey, but
-        // not the message body). See `transport/ssb.ts` for the matching
-        // decryption path on the receiver side.
-        const sealedB64 = await sealSsbDm(this.identity, toPubkey, plaintext);
-        const fromHex = bytesToHex(this.identity.pubkey);
-        const r = await this.ssb.publish({
-          type: "aegis-dm",
-          to: toPubkey,
-          // Including `from` is necessary so the receiver can perform
-          // ECDH(my_seckey, from). The SSB feed id (author) is a
-          // one-way HKDF of the master seckey to Ed25519, so it can't be
-          // back-mapped to a secp256k1 pubkey.
-          from: fromHex,
-          sealed: sealedB64,
-          ephemeral: false,
-        });
-        return { network: "ssb", id: r.id };
-      } catch (err) {
-        failures.push(`ssb: ${describeError(err)}`);
-      }
-    } else {
-      failures.push("ssb: not connected");
-    }
-
     throw new Error(
       "AegisTransport.directMessage: all networks failed — " +
         failures.join("; "),
@@ -713,13 +628,9 @@ export class AegisTransport {
     if (this.connected.matrix) {
       tasks.push(this.matrix.close().catch(() => undefined));
     }
-    if (this.connected.ssb) {
-      tasks.push(this.ssb.close().catch(() => undefined));
-    }
     await Promise.allSettled(tasks);
     this.connected.nostr = false;
     this.connected.matrix = false;
-    this.connected.ssb = false;
     this.matrixRoomByType.clear();
   }
 
@@ -730,7 +641,6 @@ export class AegisTransport {
     const out: Network[] = [];
     if (this.connected.nostr) out.push("nostr");
     if (this.connected.matrix) out.push("matrix");
-    if (this.connected.ssb) out.push("ssb");
     return out;
   }
 
@@ -816,41 +726,6 @@ export class AegisTransport {
       });
     });
   }
-
-  private subscribeSsb(
-    filter: AegisFilter,
-    forward: (ev: AegisEvent) => void,
-  ): () => void {
-    // SSB subscribe supports `author` filtering on the wire; pass the first
-    // author if any, and rely on the cross-network `forward` post-filter for
-    // additional authors.
-    const opts =
-      filter.authors && filter.authors.length === 1
-        ? { author: filter.authors[0] }
-        : {};
-    return this.ssb.subscribe(opts, (m) => {
-      const c = m.value.content as
-        | { type?: string; payload?: unknown }
-        | undefined;
-      const rawType = c?.type;
-      if (typeof rawType !== "string" || !rawType.startsWith("aegis-")) {
-        return;
-      }
-      const aegisType = rawType.slice("aegis-".length);
-      const payload = c?.payload ?? null;
-      // SSB timestamps are ms; AegisEvent.ts is seconds.
-      const ts = Math.floor((m.value.timestamp ?? Date.now()) / 1000);
-      const id = aegisEventId(m.value.author, aegisType, payload);
-      forward({
-        id,
-        origin: "ssb",
-        sender: m.value.author,
-        type: aegisType,
-        content: payload,
-        ts,
-      });
-    });
-  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -864,7 +739,6 @@ export class AegisTransport {
 type TransportDeps = {
   nostr?: NostrTransport;
   matrix?: MatrixTransport;
-  ssb?: SSBTransport;
 };
 
 /**
@@ -873,7 +747,6 @@ type TransportDeps = {
  * the URL is purely a structural requirement of `MatrixTransport`.
  */
 const PLACEHOLDER_MATRIX_HOMESERVER = "https://matrix.invalid";
-const PLACEHOLDER_SSB_URL = "wss://ssb.invalid/aegis-ws";
 
 function describeError(err: unknown): string {
   if (err instanceof Error) return err.message || err.name || "error";
