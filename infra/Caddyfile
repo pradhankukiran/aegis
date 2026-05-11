@@ -1,6 +1,11 @@
 # Aegis reverse proxy.
-# Per plan §7 — three subdomains in front of Conduit (Matrix), strfry (Nostr), ssb-pub (SSB WS).
+# Per plan §7 — two subdomains in front of Conduit (Matrix) and strfry (Nostr).
 # For local dev, set AEGIS_DOMAIN=localhost and Caddy will use its internal CA.
+#
+# Historical note: a third `ssb.<domain>` block once fronted the SSB
+# browser-bridge pub. The pub was retired in favour of Matrix + Nostr only
+# (see docs/architecture.md). If a future peer-mesh primitive arrives, add
+# its block here.
 
 {
 	email {$LETSENCRYPT_EMAIL}
@@ -14,14 +19,4 @@ matrix.{$AEGIS_DOMAIN} {
 relay.{$AEGIS_DOMAIN} {
 	# Nostr WebSocket relay (strfry).
 	reverse_proxy strfry:7777
-}
-
-ssb.{$AEGIS_DOMAIN} {
-	# /aegis-ws — Aegis JSON-WS bridge (browser-side transport speaks this).
-	#             See src/lib/transport/ssb.ts for the protocol spec.
-	@aegis_ws path /aegis-ws /aegis-ws/*
-	reverse_proxy @aegis_ws ssb-pub:8990
-
-	# Default — native ssb-ws plugin (SHS+muxrpc-over-WS for Node SSB peers).
-	reverse_proxy ssb-pub:8989
 }

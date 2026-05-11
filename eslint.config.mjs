@@ -12,7 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Aegis-specific: infra/ is non-Next.js (Docker, Caddy, Tor, ssb-pub Node script).
+    // Aegis-specific: infra/ is non-Next.js (Docker, Caddy, Tor, vestigial ssb-pub Node script).
     "infra/**",
   ]),
 ]);

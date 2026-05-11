@@ -1,7 +1,12 @@
 # Aegis persistent backend stack.
 # Runs on a single small VM (Hetzner CX22 / Oracle Always Free) and locally for dev.
-# Five services on a shared bridge network (aegis_net), with the tor service on host net
+# Four services on a shared bridge network (aegis_net), with the tor service on host net
 # so it can reach the published Caddy ports via 127.0.0.1.
+#
+# SSB was a third leg in v1; the browser-bridge pub turned out to be
+# unmaintainable, so it has been removed from this compose file. The
+# `infra/docker/ssb-pub/` directory is kept on disk for posterity / future
+# revival but is no longer wired up.
 
 services:
   conduit:
@@ -44,22 +49,6 @@ services:
       retries: 5
       start_period: 15s
 
-  ssb-pub:
-    build:
-      context: ./docker/ssb-pub
-      dockerfile: Dockerfile
-    container_name: aegis-ssb-pub
-    restart: unless-stopped
-    networks: [aegis_net]
-    volumes:
-      - ssb_data:/root/.ssb
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8989/healthz || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
-
   tor:
     image: torproject/tor:latest
     container_name: aegis-tor
@@ -91,8 +80,6 @@ services:
         condition: service_healthy
       strfry:
         condition: service_healthy
-      ssb-pub:
-        condition: service_healthy
 
 networks:
   aegis_net:
@@ -101,7 +88,6 @@ networks:
 volumes:
   conduit_data:
   strfry_data:
-  ssb_data:
   tor_data:
   caddy_data:
   caddy_config:

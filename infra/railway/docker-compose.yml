@@ -1,6 +1,11 @@
 # Aegis Railway-native deployment variant.
-# Three services — no Caddy (Railway terminates TLS per `*.up.railway.app` URL),
+# Two services — no Caddy (Railway terminates TLS per `*.up.railway.app` URL),
 # no Tor (Crucible source detects clearnet vs Tor at runtime).
+#
+# SSB was a third leg in v1; it has been removed from this compose file.
+# The `infra/docker/ssb-pub/` directory remains on disk for posterity. The
+# orphan Railway volume `ssb-pub-volume` can be deleted manually from the
+# Railway dashboard.
 #
 # Railway does NOT consume this file via `railway up` like local Docker Compose.
 # Instead, drag-and-drop the file onto your Railway project canvas; Railway
@@ -49,21 +54,6 @@ services:
     volumes:
       - strfry_data:/app/strfry-db
 
-  ssb-pub:
-    # Same reuse pattern as strfry — image built from ../docker/ssb-pub.
-    build:
-      context: ../docker/ssb-pub
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    # Expose 8990 — the Aegis JSON-WS bridge. The native ssb-ws plugin on 8989
-    # is for Node SSB peers; the browser only ever talks to the bridge.
-    # See src/lib/transport/ssb.ts for the wire spec.
-    ports:
-      - "8990"
-    volumes:
-      - ssb_data:/root/.ssb
-
 volumes:
   conduit_data:
   strfry_data:
-  ssb_data:
