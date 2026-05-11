@@ -5,23 +5,22 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* LIGHT — neobrutalism.dev default yellow theme.
-     Bold yellow main on cream background, hard black borders + hard offset
-     shadow. Sourced from https://www.neobrutalism.dev/r/styling/yellow.json
-     with --main pinned to the canonical hex (#FFDC58) the brand publishes
-     in their installation guide. */
-  --border-radius: 5px;
-  --box-shadow-x: 4px;
-  --box-shadow-y: 4px;
-  --reverse-box-shadow-x: -4px;
-  --reverse-box-shadow-y: -4px;
+  /* LIGHT — Aegis neobrutalism palette.
+     Pure white background, electric blue main accent (#88aaee), pure
+     black borders + foreground. Radius locked to 0. Shadow size bumped
+     to 6px standard / 8px hero / 10px xl so the brutalist offset reads
+     hard on the white canvas. */
+  --box-shadow-x: 6px;
+  --box-shadow-y: 6px;
+  --reverse-box-shadow-x: -6px;
+  --reverse-box-shadow-y: -6px;
 
-  --heading-font-weight: 700;
+  --heading-font-weight: 800;
   --base-font-weight: 500;
 
-  --main: #ffdc58;
-  --background: oklch(96.79% 0.0654 102.26);
-  --secondary-background: oklch(100% 0 0);
+  --main: #88aaee;
+  --background: oklch(100% 0 0);
+  --secondary-background: oklch(96% 0 0);
   --foreground: oklch(0% 0 0);
   --main-foreground: oklch(0% 0 0);
 
@@ -30,6 +29,8 @@
   --overlay: rgba(0, 0, 0, 0.8);
 
   --shadow: var(--box-shadow-x) var(--box-shadow-y) 0px 0px var(--border);
+  --shadow-hero: 8px 8px 0px 0px var(--border);
+  --shadow-xl-token: 10px 10px 0px 0px var(--border);
 
   --chart-1: oklch(86.03% 0.176 92.36);
   --chart-2: oklch(67.28% 0.2147 24.22);
@@ -37,6 +38,18 @@
   --chart-4: oklch(67.47% 0.1726 259.49);
   --chart-5: oklch(66.34% 0.1806 277.2);
   --chart-active-dot: #000;
+
+  /* Per-feature spot accents. Used as thin left-edge stripes on cards
+     and PageHeader, and as badge fills where a feature wants to flag
+     itself visually. Page backgrounds stay pure white — these are
+     accents only. */
+  --spot-herald: #88aaee;   /* blue — same as --main */
+  --spot-scribe: #9bf6ff;   /* cyan */
+  --spot-atlas: #a3e635;    /* lime */
+  --spot-witness: #ffb86c;  /* orange */
+  --spot-beacon: #ff6b6b;   /* red */
+  --spot-quorum: #c084fc;   /* violet */
+  --spot-crucible: #ffdc58; /* yellow */
 
   /* Compat aliases for the old shadcn-style tokens still referenced by
      ported components (card, dialog, popover, etc). Kept as thin aliases
@@ -56,7 +69,7 @@
   --accent-foreground: var(--main-foreground);
   --destructive: oklch(63% 0.22 25);
   --input: var(--border);
-  --radius: var(--border-radius);
+  --radius: 0px;
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--main);
@@ -68,18 +81,20 @@
 }
 
 .dark {
-  /* DARK — neobrutalism.dev default yellow dark variant. */
-  --main: #ffdc58;
-  --background: oklch(29.28% 0.0373 94.38);
-  --secondary-background: oklch(23.93% 0 0);
-  --foreground: oklch(92.49% 0 0);
+  /* DARK — invert canvas + keep the blue accent. */
+  --main: #88aaee;
+  --background: oklch(15% 0 0);
+  --secondary-background: oklch(22% 0 0);
+  --foreground: oklch(96% 0 0);
   --main-foreground: oklch(0% 0 0);
 
-  --border: oklch(0% 0 0);
+  --border: oklch(96% 0 0);
   --ring: oklch(100% 0 0);
   --overlay: rgba(0, 0, 0, 0.8);
 
   --shadow: var(--box-shadow-x) var(--box-shadow-y) 0px 0px var(--border);
+  --shadow-hero: 8px 8px 0px 0px var(--border);
+  --shadow-xl-token: 10px 10px 0px 0px var(--border);
 
   --chart-active-dot: #fff;
 
@@ -127,6 +142,18 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
+  /* Per-feature spot accents — expose them as Tailwind colours so a
+     `bg-spot-herald` / `border-spot-scribe` utility resolves at build
+     time. Component code prefers these utilities over raw
+     `bg-[var(--spot-*)]` strings for legibility. */
+  --color-spot-herald: var(--spot-herald);
+  --color-spot-scribe: var(--spot-scribe);
+  --color-spot-atlas: var(--spot-atlas);
+  --color-spot-witness: var(--spot-witness);
+  --color-spot-beacon: var(--spot-beacon);
+  --color-spot-quorum: var(--spot-quorum);
+  --color-spot-crucible: var(--spot-crucible);
+
   /* Compat: the old `bg-card`, `bg-popover`, `bg-primary` etc utilities
      remain valid because we keep these color aliases mapped. */
   --color-card: var(--card);
@@ -157,23 +184,25 @@
   --spacing-reverseBoxShadowX: var(--reverse-box-shadow-x);
   --spacing-reverseBoxShadowY: var(--reverse-box-shadow-y);
 
-  --radius-base: var(--border-radius);
-  --radius-sm: var(--border-radius);
-  --radius-md: var(--border-radius);
-  --radius-lg: var(--border-radius);
-  --radius-xl: var(--border-radius);
-  --radius-2xl: var(--border-radius);
-  --radius-3xl: var(--border-radius);
-  --radius-4xl: var(--border-radius);
+  /* Pure brutalist — every radius scale snaps to 0. */
+  --radius-base: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
 
   --shadow-shadow: var(--shadow);
-  --shadow-nav: 4px 4px 0px 0px var(--border);
-  /* Hermetic-era hard offset shadow utilities — kept so existing call
-     sites (Card, Dialog content, etc.) using shadow-brutal / -lg / -xl
-     continue to compile. */
-  --shadow-brutal: 4px 4px 0 0 var(--border);
-  --shadow-brutal-lg: 6px 6px 0 0 var(--border);
-  --shadow-brutal-xl: 8px 8px 0 0 var(--border);
+  --shadow-nav: 6px 6px 0px 0px var(--border);
+  /* Hermetic-era hard offset shadow utilities — re-derived onto the
+     bigger 6/8/10 px palette so existing call sites
+     (Card, Dialog content, etc.) using shadow-brutal / -lg / -xl
+     automatically pick up the beefier neobrutalism scale. */
+  --shadow-brutal: var(--shadow);
+  --shadow-brutal-lg: var(--shadow-hero);
+  --shadow-brutal-xl: var(--shadow-xl-token);
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
