@@ -2,23 +2,14 @@
   "name": "aegis-ssb-pub",
   "version": "1.0.0",
   "private": true,
-  "description": "Aegis Scuttlebutt pub. Runs ssb-server with the plugins required to bridge browser clients over WebSocket. Also exposes the Aegis JSON-WS bridge on port 8990 (see src/lib/transport/ssb.ts).",
+  "description": "Aegis Scuttlebutt pub. ssb-server with ws plugin only — the bundled preset already provides friends/replicate/blobs/invite/db.",
   "main": "index.js",
-  "scripts": {
-    "start": "node index.js"
-  },
+  "scripts": { "start": "node index.js" },
   "dependencies": {
     "ssb-server": "15.3.0",
-    "secret-stack": "8.1.0",
     "ssb-master": "1.0.3",
     "ssb-ws": "6.2.3",
-    "ssb-replicate": "1.3.5",
-    "ssb-friends": "4.4.10",
-    "ssb-db2": "7.2.0",
-    "ssb-blobs": "2.0.1",
-    "ssb-private1": "1.0.1",
-    "ssb-invite": "2.1.8",
-    "pull-stream": "3.7.0",
-    "ws": "8.18.0"
+    "ws": "8.18.0",
+    "pull-stream": "3.7.0"
   }
 }

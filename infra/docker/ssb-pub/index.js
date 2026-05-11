@@ -2,14 +2,12 @@
 /**
  * Aegis Scuttlebutt pub.
  *
- * Runs an ssb-server instance with the plugin set Aegis needs:
+ * Runs an ssb-server instance. The ssb-server preset already bundles
+ * ssb-friends, ssb-replicate, ssb-blobs, ssb-private1, ssb-invite, ssb-db
+ * with compatible transitive versions; we only `.use()` what the preset is
+ * missing for Aegis:
  *   - ssb-master      : grant local processes admin caps
  *   - ssb-ws          : websocket transport (browser bridge — port 8989)
- *   - ssb-replicate   : feed replication
- *   - ssb-friends     : trust graph for replication scheduling
- *   - ssb-blobs       : binary blob exchange
- *   - ssb-private1    : legacy box1 private messages (decryption support)
- *   - ssb-invite      : invite-code generation/redemption for new peers
  *
  * Also runs:
  *   - /healthz        : tiny HTTP healthcheck endpoint (port 8989)
@@ -38,14 +36,14 @@ const BRIDGE_PORT = parseInt(process.env.AEGIS_SSB_BRIDGE_PORT || '8990', 10);
 // ssb-server is the canonical preset — it's secret-stack with the SSB
 // network's caps + ssb-db baked in. Override the appKey via the AEGIS_SHS_CAP
 // env var if running an isolated test net.
+//
+// We only `.use()` plugins that aren't already in the ssb-server default
+// preset. The preset bundles ssb-friends, ssb-replicate, ssb-blobs,
+// ssb-private1, ssb-invite, ssb-db with compatible transitive versions —
+// pinning them here a second time causes secret-stack duplication.
 const createServer = Server
   .use(require('ssb-master'))
-  .use(require('ssb-ws'))
-  .use(require('ssb-replicate'))
-  .use(require('ssb-friends'))
-  .use(require('ssb-blobs'))
-  .use(require('ssb-private1'))
-  .use(require('ssb-invite'));
+  .use(require('ssb-ws'));
 
 const config = {
   host: '0.0.0.0',
