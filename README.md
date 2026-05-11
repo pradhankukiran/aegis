@@ -1,19 +1,18 @@
 # Aegis
 
-> *Your decentralized everything-app — pubkey identity, end-to-end encryption, three independent networks. No single adversary can take you off the air.*
+> *Your decentralized everything-app — pubkey identity, end-to-end encryption, two independent networks. No single adversary can take you off the air.*
 
-End-to-end encrypted. Censorship-resistant. Federated three ways.
+End-to-end encrypted. Censorship-resistant. Federated two ways.
 One keypair, one app, **seven** features that share the same identity, transport, and crypto layer.
 
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![React 19](https://img.shields.io/badge/React-19-000000?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-000000?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Tailwind CSS v4](https://img.shields.io/badge/Tailwind-v4-000000?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Vitest](https://img.shields.io/badge/Vitest-363%2F363-000000?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev)
+[![Vitest](https://img.shields.io/badge/Vitest-392%2F392-000000?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev)
 
 [![Nostr](https://img.shields.io/badge/Nostr-NIP--44%20v2-000000?style=for-the-badge&logoColor=white)](https://github.com/nostr-protocol/nips/blob/master/44.md)
 [![Matrix](https://img.shields.io/badge/Matrix-Vodozemac%20WASM-000000?style=for-the-badge&logo=matrix&logoColor=white)](https://matrix.org)
-[![Scuttlebutt](https://img.shields.io/badge/Scuttlebutt-ssb--server%20bridge-000000?style=for-the-badge&logoColor=white)](https://scuttlebutt.nz)
 [![libsodium](https://img.shields.io/badge/libsodium-XChaCha20--Poly1305-000000?style=for-the-badge&logoColor=white)](https://libsodium.gitbook.io)
 [![secp256k1](https://img.shields.io/badge/secp256k1-BIP--340%20Schnorr-000000?style=for-the-badge&logoColor=white)](https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki)
 [![drand](https://img.shields.io/badge/drand-quicknet-000000?style=for-the-badge&logoColor=white)](https://drand.love)
@@ -22,22 +21,26 @@ One keypair, one app, **seven** features that share the same identity, transport
 
 ## What it is
 
-A privacy-first super-app. Pubkey identity, end-to-end encrypted, federated three ways for resilience. One keypair generated locally on first run becomes your messenger handle, notes account, location pubkey, voter ID, and whistleblower pseudonym — across every feature.
+A privacy-first super-app. Pubkey identity, end-to-end encrypted, federated two ways for resilience. One keypair generated locally on first run becomes your messenger handle, notes account, location pubkey, voter ID, and whistleblower pseudonym — across every feature.
 
-Aegis publishes through three independent networks simultaneously:
+Aegis publishes through two independent networks simultaneously:
 
 - **Nostr** — permissionless pubkey identity + WebSocket relay broadcast. Instant reach.
 - **Matrix** — production-grade E2E (Olm/Megolm over Vodozemac), forward secrecy, group state.
-- **Scuttlebutt** — offline-first, append-only, peer-to-peer gossip. Works without infrastructure.
 
-Take down one network and the other two still deliver. Block one country and peers in others still gossip. Same identity, same crypto, three transports.
+Take down one network and the other still delivers. Block one country and peers in others still see your events. Same identity, same crypto, two transports.
+
+> An earlier draft included a third leg — Scuttlebutt — for offline-mesh
+> resilience. The browser-bridge pub proved unmaintainable in production
+> and has been removed. `infra/docker/ssb-pub/` is preserved on disk for a
+> future replacement; nothing in this repo currently wires it up.
 
 ### Sibling to Hermetic
 
 | | [Hermetic](https://github.com/pradhankukiran/hermetic) | Aegis |
 |---|---|---|
 | Mode | **Static** seals — encrypt now, unlock later (ten unlock policies) | **Live** transport — real-time messaging, sync, broadcast |
-| Storage | IPFS via Pinata (single pinning provider) | Three federated networks (Nostr + Matrix + SSB) |
+| Storage | IPFS via Pinata (single pinning provider) | Two federated networks (Nostr + Matrix) |
 | Crypto | XChaCha20-Poly1305 envelopes + per-mode wrap policies | Matrix Olm/Megolm group sessions for E2E + per-feature symmetric envelopes |
 | Audience | "I want to seal one thing for one purpose" | "I want all my private comms in one censorship-resistant place" |
 
@@ -63,15 +66,14 @@ Long-form per-feature architecture lives in [`docs/architecture.md`](./docs/arch
 
 <br />
 
-## The three networks
+## The two networks
 
 | Network | Library | Brings | Used for |
 |---|---|---|---|
 | **Nostr** | `nostr-tools` | Permissionless pubkey identity + WebSocket relay broadcast | Public events (notary anchors, polls), Nostr-side DM fallback (NIP-44 v2) |
 | **Matrix** | `matrix-js-sdk` + Rust crypto WASM (Vodozemac) | Forward-secret group sessions, post-compromise security, room state | DM primary path, group state, encrypted CRDT updates for shared notes |
-| **Scuttlebutt** | `ssb-server` in Docker + thin WebSocket bridge | Offline-first append-only feed | Personal note feed, disaster-mode gossip when other networks are blocked |
 
-Each network is independently verifiable; an attacker would need to compromise all three to deny an event.
+Each network is independently verifiable; an attacker would need to compromise both to deny an event.
 
 <br />
 
@@ -85,7 +87,6 @@ Each network is independently verifiable; an attacker would need to compromise a
 | **KDF / hash** | `@noble/hashes@2.2.0` — Argon2id (light/balanced/strong), SHA-256, HKDF-SHA256 |
 | **Nostr** | `nostr-tools@2.23.3` — `SimplePool`, NIP-44 v2 DMs (kind 14), NIP-78 (kind 30078) for Aegis events |
 | **Matrix** | `matrix-js-sdk@41.4.0` + `@matrix-org/matrix-sdk-crypto-wasm@18.2.0` (Vodozemac), IndexedDB crypto store |
-| **Scuttlebutt** | Docker `ssb-server` reached via a thin JSON-over-WebSocket bridge; Ed25519 keys derived via HKDF-SHA256(info=`aegis-ssb-ed25519-v1`) |
 | **CRDT** | `yjs@13.6.30` + `y-protocols@1.0.7` for collaborative notes |
 | **Map** | `leaflet@1.9.4` + `react-leaflet@5.0.0` over OpenStreetMap raster tiles |
 | **Timelock** | `tlock-js@0.9.0` against drand quicknet (used by Quorum sealed ballots + Beacon network-anchored release) |
@@ -116,7 +117,7 @@ Without `PINATA_JWT` the Beacon and Crucible features degrade to local-only pers
 
 ### Optional — local persistent backend
 
-Bring up Conduit (Matrix homeserver), strfry (Nostr relay), ssb-pub (SSB bridge), tor (hidden service), and Caddy (TLS) in one stack:
+Bring up Conduit (Matrix homeserver), strfry (Nostr relay), tor (hidden service), and Caddy (TLS) in one stack:
 
 ```bash
 cd infra && docker compose up
@@ -126,11 +127,10 @@ Defaults to `aegis.app` as the served domain; override with `AEGIS_DOMAIN=mydoma
 
 - `matrix.<domain>` → Conduit (`6167`)
 - `relay.<domain>` → strfry (`7777`)
-- `ssb.<domain>` → ssb-pub (`8989`)
 
-Without Docker, Aegis falls back to public Nostr relays and any homeserver / SSB pub the user points it at.
+Without Docker, Aegis falls back to public Nostr relays and any homeserver the user points it at.
 
-Deploying to Railway instead of a VM? See [`infra/railway/`](./infra/railway/) — three services, no Caddy, no Tor, TLS handled per `*.up.railway.app` URL.
+Deploying to Railway instead of a VM? See [`infra/railway/`](./infra/railway/) — two services, no Caddy, no Tor, TLS handled per `*.up.railway.app` URL.
 
 <br />
 
@@ -140,7 +140,7 @@ Deploying to Railway instead of a VM? See [`infra/railway/`](./infra/railway/) �
 npx vitest run --no-file-parallelism
 ```
 
-**363 tests pass across 34 files.** Coverage spans: XChaCha20-Poly1305 round-trip, AAD-binding rejection, Argon2id determinism, SHA-256 vectors, Shamir split/combine, BIP-340 Schnorr verify, per-feature envelope round-trips, cross-network transport dedup, Beacon trigger evaluation, Quorum seal/unseal/tally, Crucible ECDH derivation.
+**392 tests pass across 35 files.** Coverage spans: XChaCha20-Poly1305 round-trip, AAD-binding rejection, Argon2id determinism, SHA-256 vectors, Shamir split/combine, BIP-340 Schnorr verify, per-feature envelope round-trips, cross-network transport dedup, Beacon trigger evaluation, Quorum seal/unseal/tally, Crucible ECDH derivation.
 
 The `--no-file-parallelism` flag is load-bearing: the `kdf.test.ts` Argon2id determinism test occasionally flakes under default parallelism on memory-constrained runners (the `balanced` preset wants 64 MiB per worker). Sequential file execution removes the contention.
 
@@ -151,7 +151,7 @@ Network-touching code (live Nostr relay sockets, live Conduit registration, dran
 ## Threat model summary
 
 - Server operators see ciphertext and minimal metadata. Never plaintext. Never keys.
-- Take down one of the three networks and the other two still deliver.
+- Take down one of the two networks and the other still delivers.
 - Same identity is reused across Herald, Scribe, Atlas, Witness, Beacon, Quorum. Crucible sources mint a one-shot ephemeral keypair so source identity never touches IndexedDB.
 - We do NOT defend against a compromised browser / device, network metadata, or quantum adversaries against Curve25519 / secp256k1 / drand BLS pairings.
 - Lost identity key without a Shamir or recovery-code backup = lost data, by design.
@@ -181,15 +181,15 @@ src/
 └── lib/
     ├── identity/                  secp256k1 master keypair + IDB persistence + portable export
     ├── crypto/                    sodium · symmetric · kdf · hash · random · shamir · timelock · schnorr · halo-prf
-    ├── transport/                 AegisTransport facade + per-network adapters (nostr · matrix · ssb)
+    ├── transport/                 AegisTransport facade + per-network adapters (nostr · matrix)
     ├── pinata/                    server client + browser upload helper
     └── <feature>/                 per-feature envelope, store, transport bridge, hooks
 
 infra/
-├── docker-compose.yml             conduit + strfry + ssb-pub + tor + caddy
+├── docker-compose.yml             conduit + strfry + tor + caddy
 ├── Caddyfile                      reverse proxy + Let's Encrypt
 ├── docker/strfry/                 Nostr relay image
-├── docker/ssb-pub/                SSB bridge image (Node.js shim)
+├── docker/ssb-pub/                preserved on disk for a future revival; not wired up
 └── tor/torrc                      hidden-service config for Crucible
 ```
 

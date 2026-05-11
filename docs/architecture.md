@@ -1,6 +1,15 @@
 # Architecture
 
-How Aegis is wired. Top-down: one identity, one transport facade over three networks, seven features that compose on top of both. Every section is keyed to actual file paths in `src/`.
+How Aegis is wired. Top-down: one identity, one transport facade over two networks, seven features that compose on top of both. Every section is keyed to actual file paths in `src/`.
+
+> **SSB note** — Aegis originally shipped a third network leg
+> (Scuttlebutt via a thin browser-bridge pub). That pub turned out to be
+> unmaintainable in production and has been removed. The transport
+> facade now publishes through Matrix + Nostr only. Sections below have
+> been updated to match the live shape; offline-mesh resilience (the
+> original SSB story) is deferred until a replacement primitive lands.
+> The `src/lib/transport/ssb.ts` browser client has been deleted, and
+> `infra/docker/ssb-pub/` is preserved on disk but unwired.
 
 ---
 
@@ -23,17 +32,17 @@ How Aegis is wired. Top-down: one identity, one transport facade over three netw
               │  Transport facade (src/lib/transport/)    │
               │  AegisTransport.{publish, subscribe,      │
               │                  subscribeDM, directMessage}
-              └──┬──────────────────┬──────────────────┬──┘
-                 │                  │                  │
-        ┌────────▼───────┐ ┌────────▼───────┐ ┌────────▼───────┐
-        │ NostrTransport │ │ MatrixTransport │ │  SSBTransport  │
-        │ nostr-tools    │ │ matrix-js-sdk  │ │  WS-bridge to  │
-        │ SimplePool +   │ │ + Vodozemac    │ │  ssb-server    │
-        │ NIP-44 v2 DMs  │ │ WASM crypto    │ │  in Docker     │
-        └────────┬───────┘ └────────┬───────┘ └────────┬───────┘
-                 │                  │                  │
-            wss://relay        https://matrix       wss://ssb
-            .aegis.app         .aegis.app           .aegis.app
+              └──┬──────────────────┬────────────────────┘
+                 │                  │
+        ┌────────▼───────┐ ┌────────▼────────┐
+        │ NostrTransport │ │ MatrixTransport │
+        │ nostr-tools    │ │ matrix-js-sdk   │
+        │ SimplePool +   │ │ + Vodozemac     │
+        │ NIP-44 v2 DMs  │ │ WASM crypto     │
+        └────────┬───────┘ └────────┬────────┘
+                 │                  │
+            wss://relay        https://matrix
+            .aegis.app         .aegis.app
 
               ┌────────────────────────────────────────┐
               │  Crypto primitives (src/lib/crypto/)    │
@@ -62,15 +71,14 @@ A single secp256k1 keypair is the user's everything. Generated locally on first 
 - **Persistence**: IndexedDB database `aegis`, object store `identity`, primary key `"primary"`. Implementation in `src/lib/identity/storage.ts`. Raw IDB, no wrapper — the access pattern is single-record CRUD.
 - **Portable export**: `exportIdentity` / `importIdentity` in `src/lib/identity/portable.ts`. Wire form `aegis:id:v=1:<base64url(JSON.stringify({seckey, createdAt}))>`. The pubkey is re-derived on import — you cannot import a pubkey that does not match its seckey. The blob is unencrypted; users protect it the way they would a master password.
 
-**Cross-network derivation**. The master keypair maps onto each of the three networks deterministically.
+**Cross-network derivation**. The master keypair maps onto each of the two networks deterministically.
 
 | Network | Form | How |
 |---|---|---|
 | Nostr | x-only 32-byte hex (BIP-340) | Strip the SEC1 parity byte off the compressed pubkey. The x-coordinate alone uniquely determines the BIP-340-canonical (even-Y) point. See `src/lib/transport/nostr.ts` constructor. |
 | Matrix | `@<localpart>:<homeserver-domain>` | Localpart = first 24 hex chars of the pubkey's x-coordinate (12 bytes / 96 bits of entropy). Domain is parsed from the homeserver URL. See `src/lib/transport/matrix.ts` `deriveLocalpart`. |
-| SSB | `@<base64>.ed25519` | HKDF-SHA256(`identity.seckey`, salt=∅, info=`aegis-ssb-ed25519-v1`, 32) → Ed25519 seed → `ed25519.getPublicKey(seed)` → base64. See `src/lib/transport/ssb.ts`. |
 
-All three derivations are pure functions of the master keypair — restoring the identity on a new device restores all three network presences.
+Both derivations are pure functions of the master keypair — restoring the identity on a new device restores both network presences.
 
 ---
 
@@ -97,31 +105,29 @@ Every cross-network event carries a stable identifier:
 id = sha256(sender + ":" + type + ":" + canonicalize(content))
 ```
 
-`canonicalize` is JSON-with-recursively-sorted-keys (`canonicalize` exported from `src/lib/transport/index.ts`). The same logical content produces the same id regardless of which network it arrived on or which JS engine serialized it. A 60-second-TTL FIFO map (`DedupCache`) gates the cross-network subscribe callback so identical events delivered by all three networks fire the subscriber once.
+`canonicalize` is JSON-with-recursively-sorted-keys (`canonicalize` exported from `src/lib/transport/index.ts`). The same logical content produces the same id regardless of which network it arrived on or which JS engine serialized it. A 60-second-TTL FIFO map (`DedupCache`) gates the cross-network subscribe callback so identical events delivered by both networks fire the subscriber once.
 
 ### Per-network mapping for `aegis.<type>` events
 
-Each Aegis logical event type maps consistently across the three transports.
+Each Aegis logical event type maps consistently across the two transports.
 
 | Network | Outbound mapping | Notes |
 |---|---|---|
 | Nostr | NIP-78 (kind 30078 — "Application-specific Data"), `d` tag of `aegis:<type>`, plus an explicit `["aegis-type", <type>]` tag for client-side filtering | NIP-78 is parameterized-replaceable, so callers can carry a single "latest" event per logical type. The `NOSTR_AEGIS_KIND` constant centralizes the kind for future per-type tuning. |
 | Matrix | Custom event type `aegis.<type>` inside a topic room aliased `#aegis-<type>:<homeserver-domain>`. Lazily created on first publish, private, encrypted. | As of v1 the topic-room subscription model only sees events the user authored themselves (no invites yet). Multi-author rooms are a Phase 4 enhancement; the inbound decoder is forward-compatible. |
-| SSB | `ssb.publish({ type: "aegis-" + type, payload, tags })`. Tags are descriptive metadata — the SSB pub does not filter on them. | The `aegis-` prefix is added by the SSB transport; callers use the bare logical type. |
 
 ### directMessage fallback chain
 
-Three tries, in order, returning on first success:
+Two tries, in order, returning on first success:
 
 1. **Matrix** — encrypted DM room, recipient resolved from pubkey hex via the localpart derivation. Olm 1-to-1 ratchet under the hood.
 2. **Nostr** — NIP-44 v2 encrypted content inside `kind 14` (the "Private Direct Message" kind from NIP-17). Not yet wrapped in NIP-59 gift-wrap (metadata privacy) — the inner ciphertext is the same NIP-44 v2 payload either way; the gift-wrap layer is a future enhancement.
-3. **SSB** — publish-with-recipient-tag. SSB private boxes are deferred to Phase 4; v1 ships plaintext content with a `to` field. See `src/lib/transport/ssb.ts`.
 
-If all three fail, an aggregate error lists each failure.
+If both fail, an aggregate error lists each failure.
 
 ### `subscribe` and `subscribeDM`
 
-`subscribe(filter, callback)` opens per-network subscriptions, maps each network's native event shape onto `AegisEvent`, and forwards through the dedup cache to `callback`. `subscribeDM(callback)` is the inbound DM equivalent — each transport decodes its own crypto and delivers an `IncomingDM` with the plaintext body and the sender id in the *origin network's canonical form* (Nostr x-only hex / Matrix MXID / SSB feed id). Per the threat-model doc, these are treated as separate addressing spaces until a directory resolver lands.
+`subscribe(filter, callback)` opens per-network subscriptions, maps each network's native event shape onto `AegisEvent`, and forwards through the dedup cache to `callback`. `subscribeDM(callback)` is the inbound DM equivalent — each transport decodes its own crypto and delivers an `IncomingDM` with the plaintext body and the sender id in the *origin network's canonical form* (Nostr x-only hex / Matrix MXID). Per the threat-model doc, these are treated as separate addressing spaces until a directory resolver lands.
 
 ---
 
@@ -132,10 +138,10 @@ If all three fail, an aggregate error lists each failure.
 | Aspect | Detail |
 |---|---|
 | **Routes** | `/herald` (single page; conversation list + chat pane) |
-| **Crypto envelope** | DM-layer only. Matrix Olm 1-to-1 ratchet (primary) → Nostr NIP-44 v2 (fallback) → SSB plaintext-with-recipient-tag (fallback). |
+| **Crypto envelope** | DM-layer only. Matrix Olm 1-to-1 ratchet (primary) → Nostr NIP-44 v2 (fallback). |
 | **Storage** | IndexedDB `aegis-herald` with two object stores: `conversations` (keyed on x-only pubkey hex), `messages` (keyed on message id, secondary index on `convId`). `src/lib/herald/store.ts`. |
 | **Transport surface** | `AegisTransport.directMessage` (outbound) and `AegisTransport.subscribeDM` (inbound). The Herald `transport-bridge.ts` mints optimistic UUIDs for outbound messages and walks the status state machine `sending → sent / failed`. |
-| **Open** | Cross-network `from` form: Nostr DMs surface 64-char x-only hex, Matrix surfaces MXID, SSB surfaces feed id. Treated as separate addressing spaces in v1; directory resolver is Phase 4. |
+| **Open** | Cross-network `from` form: Nostr DMs surface 64-char x-only hex, Matrix surfaces MXID. Treated as separate addressing spaces in v1; directory resolver is Phase 4. |
 
 ### Scribe — `/scribe` (`src/lib/scribe/`)
 
@@ -144,7 +150,7 @@ If all three fail, an aggregate error lists each failure.
 | **Routes** | `/scribe` (note list + editor) |
 | **Crypto envelope** | XChaCha20-Poly1305 with AAD `aegis:notes:v=1`. Two-tier: HKDF-SHA256(seckey, info=`aegis-scribe-notes-v1`, 32) → Scribe master key → wraps a fresh per-note 32-byte key → which encrypts the body. `src/lib/scribe/envelope.ts`. |
 | **Storage** | IndexedDB `aegis-scribe` for note metadata + encrypted bodies. `src/lib/scribe/storage.ts`. Cross-device sync via Pinata blob persistence is **deferred** in v1 (`src/lib/scribe/feed.ts` publishes save-marker metadata only). |
-| **Transport surface** | SSB feed entries for save markers via `AegisTransport.ssb.publish({type: "aegis-note-saved", payload: {note_id, updatedAt}})`. The encrypted body never crosses the wire in v1. Future shared-notes path: Y.js CRDT updates encrypted per-room key and shipped as `aegis.note.update` custom Matrix events (see `src/lib/scribe/crdt.ts` for the local Y.Doc plumbing). |
+| **Transport surface** | Save/delete markers are no-ops post-SSB removal — `publishSaveMarker` / `publishDeleteMarker` in `src/lib/scribe/feed.ts` are stubbed for a future feed-channel reintroduction. The encrypted body never crosses the wire in v1; Pinata is the durable mirror. Future shared-notes path: Y.js CRDT updates encrypted per-room key and shipped as `aegis.note.update` custom Matrix events (see `src/lib/scribe/crdt.ts` for the local Y.Doc plumbing). |
 | **Open** | Pinata persistence; collaborative-note Matrix room model; CRDT garbage-collection / snapshot cadence. |
 
 ### Atlas — `/atlas` (`src/lib/atlas/`)
@@ -152,7 +158,7 @@ If all three fail, an aggregate error lists each failure.
 | Aspect | Detail |
 |---|---|
 | **Routes** | `/atlas` (map + circle panel + share toggle) |
-| **Crypto envelope** | Per-recipient encrypted DM per tick — the per-tick `LocationMessage` envelope `{type: "aegis.location", fix}` is JSON-serialized and shipped via `AegisTransport.directMessage` to each circle member. Each recipient gets a per-DM Olm / NIP-44 / SSB ciphertext. No Atlas-specific symmetric envelope. |
+| **Crypto envelope** | Per-recipient encrypted DM per tick — the per-tick `LocationMessage` envelope `{type: "aegis.location", fix}` is JSON-serialized and shipped via `AegisTransport.directMessage` to each circle member. Each recipient gets a per-DM Olm / NIP-44 ciphertext. No Atlas-specific symmetric envelope. |
 | **Storage** | IndexedDB `aegis-atlas` with two stores: circle members (`src/lib/atlas/circle-store.ts`), bounded per-peer position log (`src/lib/atlas/position-store.ts`). |
 | **Transport surface** | `AegisTransport.directMessage` for fan-out. `AegisTransport.subscribeDM` filters on `LocationMessage.type === "aegis.location"` for inbound. Tick cadence default 5 minutes (`DEFAULT_SHARE_INTERVAL_MS`). |
 | **Open** | Battery profile; tuning cadence based on viewer activity; permission-recovery UX. |
@@ -164,7 +170,7 @@ If all three fail, an aggregate error lists each failure.
 | **Routes** | `/witness` (drop-zone + history), `/witness/[hash]` (verify panel — given a hash, fetch the anchor record and show per-network proof status) |
 | **Crypto** | BIP-340 Schnorr signature over `sha256(canonicalize({hash, ts}))`. `src/lib/witness/anchor.ts` — `anchorDigest`, `signAnchor`. Schnorr from `@noble/curves/secp256k1.js`, NOT the `lib/crypto/schnorr.ts` Σ-protocol primitive (which is a different beast). |
 | **Storage** | IndexedDB `aegis-witness` for the per-anchor record (`hash`, `sig`, `signer`, `ts`, per-network anchor ids, file metadata). `src/lib/witness/storage.ts`. |
-| **Transport surface** | `AegisTransport.publish({type: "aegis.witness", content: {hash, sig, signer, ts}})` fans the anchor out across all three networks. The local `AnchorRecord` carries per-network success / failure plus the native event id (Nostr event id / Matrix event id / SSB msg id). |
+| **Transport surface** | `AegisTransport.publish({type: "aegis.witness", content: {hash, sig, signer, ts}})` fans the anchor out across both networks. The local `AnchorRecord` carries per-network success / failure plus the native event id (Nostr event id / Matrix event id). |
 | **Verify** | `src/lib/witness/verify.ts` re-derives the digest, verifies the Schnorr signature, and resolves each per-network anchor id back to the originating event. |
 | **Open** | Cross-relay verification (querying for the anchor on networks the verifier hasn't subscribed to). |
 
@@ -223,20 +229,19 @@ npm run dev                            # → http://localhost:3000
 
 ### Persistent backend (optional)
 
-`infra/docker-compose.yml` brings up Conduit (Matrix homeserver), strfry (Nostr relay), ssb-pub (SSB bridge), tor (hidden service), and Caddy (reverse proxy + Let's Encrypt) in one stack.
+`infra/docker-compose.yml` brings up Conduit (Matrix homeserver), strfry (Nostr relay), tor (hidden service), and Caddy (reverse proxy + Let's Encrypt) in one stack.
 
 ```bash
 cd infra
 docker compose up
 ```
 
-Five services on a shared bridge network (`aegis_net`), with `tor` on host networking so the hidden service reaches Caddy's published 80/443 on 127.0.0.1.
+Four services on a shared bridge network (`aegis_net`), with `tor` on host networking so the hidden service reaches Caddy's published 80/443 on 127.0.0.1.
 
 Caddyfile maps:
 
 - `matrix.<domain>` → Conduit (`6167`)
 - `relay.<domain>` → strfry (`7777`)
-- `ssb.<domain>` → ssb-pub (`8989`)
 
 The domain defaults to `aegis.app`; override with `AEGIS_DOMAIN=mydomain.example`. Let's Encrypt email comes from `LETSENCRYPT_EMAIL`.
 

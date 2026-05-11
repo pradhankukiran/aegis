@@ -4,6 +4,25 @@ Read-only review of `src/lib/` and `src/app/api/` against the threat model in
 `aegis-plan.md` §8. No code changes were made; the tech-debt agent will apply
 fixes based on this report.
 
+> **Post-SSB-removal note (Phase 7).** The SSB transport leg and its
+> browser-bridge pub were removed after this audit was written. Findings
+> tagged SSB (SEC-003, SEC-014, plus the SSB clause of SEC-006 / SEC-019)
+> no longer correspond to live code paths:
+>
+> - **SEC-003** is moot — `directMessage` no longer has an SSB fallback.
+>   `src/lib/transport/index.ts` now does Matrix → Nostr only.
+> - **SEC-014** is moot — `publishSaveMarker` / `publishDeleteMarker` are
+>   stubbed no-ops in `src/lib/scribe/feed.ts`; nothing is published on
+>   save/delete in v1.
+> - **SEC-006** is half-moot — Matrix-side author filtering is still a
+>   gap, but the SSB clause is dead.
+> - **SEC-019** drops the `aegis-ssb-ed25519-v1` HKDF info string — no
+>   call site remains.
+>
+> Section headers ("Three-network facade", "transport — Three-network
+> facade is solid", etc.) read as historical context. The current live
+> shape is documented in `docs/architecture.md` and `docs/threat-model.md`.
+
 ## 1. Methodology
 
 Read every `.ts` file in `src/lib/` (about 60 source modules, excluding tests)
