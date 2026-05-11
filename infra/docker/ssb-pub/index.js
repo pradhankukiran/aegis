@@ -26,7 +26,7 @@
 const crypto = require('crypto');
 const http = require('http');
 
-const SecretStack = require('secret-stack');
+const Server = require('ssb-server');
 const pull = require('pull-stream');
 const WebSocket = require('ws');
 
@@ -35,19 +35,10 @@ const MUXRPC_PORT = parseInt(process.env.AEGIS_SSB_PORT || '8008', 10);
 const HEALTH_PORT = parseInt(process.env.AEGIS_HEALTH_PORT || '8989', 10);
 const BRIDGE_PORT = parseInt(process.env.AEGIS_SSB_BRIDGE_PORT || '8990', 10);
 
-// secret-stack assembles the actual ssb-server with its plugin chain.
-// ssb-server itself is the published preset, but we list the plugins explicitly
-// so the configuration is auditable.
-const createServer = SecretStack({
-  // secret-stack@8 renamed caps.shs -> global.appKey. Standard SSB shs caps
-  // key — same value every SSB peer in the public network uses.
-  // (Override via env if running an isolated Aegis test net.)
-  global: {
-    appKey:
-      process.env.AEGIS_SHS_CAP ||
-      '1KHLiKZvAvjbY1ziZEHMXawbCEIM6qwjCDm3VYRan/s=',
-  },
-})
+// ssb-server is the canonical preset — it's secret-stack with the SSB
+// network's caps + ssb-db baked in. Override the appKey via the AEGIS_SHS_CAP
+// env var if running an isolated test net.
+const createServer = Server
   .use(require('ssb-master'))
   .use(require('ssb-ws'))
   .use(require('ssb-replicate'))
