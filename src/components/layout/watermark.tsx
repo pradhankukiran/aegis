@@ -16,7 +16,7 @@ export function Watermark() {
       aria-hidden
       className="pointer-events-none fixed inset-0 z-0 overflow-hidden select-none"
     >
-      <div className="text-foreground/[0.11] dark:text-foreground/[0.08] absolute -inset-x-[15%] -inset-y-[10%] flex -rotate-[18deg] flex-col justify-center gap-7">
+      <div className="text-foreground/[0.07] dark:text-foreground/[0.06] absolute -inset-x-[15%] -inset-y-[10%] flex -rotate-[18deg] flex-col justify-center gap-7">
         {Array.from({ length: ROWS }).map((_, i) => (
           <div
             key={i}

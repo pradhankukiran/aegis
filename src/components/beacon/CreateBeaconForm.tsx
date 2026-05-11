@@ -112,15 +112,13 @@ export function CreateBeaconForm({
         if (!next) reset();
       }}
     >
-      <DialogTrigger
-        render={
-          <Button
-            variant="outline"
-            className="shadow-[var(--shadow-brutal)]"
-          />
-        }
-      >
-        + New beacon
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          className="shadow-[var(--shadow-brutal)]"
+        >
+          + New beacon
+        </Button>
       </DialogTrigger>
       <DialogContent className="border-2 border-foreground rounded-none shadow-[var(--shadow-brutal-lg)] max-w-lg">
         <DialogHeader>

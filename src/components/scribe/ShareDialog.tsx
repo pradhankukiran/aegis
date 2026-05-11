@@ -54,16 +54,14 @@ export function ShareDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <Button
-            variant="outline"
-            disabled={disabled}
-            className="shadow-[var(--shadow-brutal)]"
-          />
-        }
-      >
-        {isShared ? "Shared" : "Share"}
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          disabled={disabled}
+          className="shadow-[var(--shadow-brutal)]"
+        >
+          {isShared ? "Shared" : "Share"}
+        </Button>
       </DialogTrigger>
       <DialogContent className="border-2 border-foreground rounded-none shadow-[var(--shadow-brutal-lg)]">
         <DialogHeader>

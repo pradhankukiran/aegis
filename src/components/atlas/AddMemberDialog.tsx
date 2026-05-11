@@ -62,16 +62,14 @@ export function AddMemberDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <Button
-            variant="outline"
-            size="xs"
-            className="shadow-[var(--shadow-brutal)]"
-          />
-        }
-      >
-        + add
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="xs"
+          className="shadow-[var(--shadow-brutal)]"
+        >
+          + add
+        </Button>
       </DialogTrigger>
       <DialogContent className="rounded-none border-2 border-foreground shadow-[var(--shadow-brutal-lg)]">
         <DialogHeader>

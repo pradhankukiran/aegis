@@ -40,15 +40,13 @@ export function FireConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <Button
-            variant="outline"
-            className="shadow-[var(--shadow-brutal)]"
-          />
-        }
-      >
-        Trigger now (test)
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          className="shadow-[var(--shadow-brutal)]"
+        >
+          Trigger now (test)
+        </Button>
       </DialogTrigger>
       <DialogContent className="border-2 border-foreground rounded-none shadow-[var(--shadow-brutal-lg)]">
         <DialogHeader>

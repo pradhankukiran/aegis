@@ -59,15 +59,13 @@ export function AddConversationDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <Button
-            variant="outline"
-            className="shadow-[var(--shadow-brutal)]"
-          />
-        }
-      >
-        + Add conversation
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          className="shadow-[var(--shadow-brutal)]"
+        >
+          + Add conversation
+        </Button>
       </DialogTrigger>
       <DialogContent className="border-2 border-foreground rounded-none shadow-[var(--shadow-brutal-lg)]">
         <DialogHeader>
