@@ -1,21 +1,40 @@
-# Aegis
+<p align="center">
+  <img src="./docs/banner.svg" alt="Aegis — decentralized everything-app" width="100%"/>
+</p>
 
-> *Your decentralized everything-app — pubkey identity, end-to-end encryption, two independent networks. No single adversary can take you off the air.*
+<p align="center">
+  <strong>Decentralized everything-app — pubkey identity, end-to-end encryption, two federated networks. Seven features, one keypair.</strong>
+  <br/>
+  <em>No single adversary can take you off the air.</em>
+</p>
 
-End-to-end encrypted. Censorship-resistant. Federated two ways.
-One keypair, one app, **seven** features that share the same identity, transport, and crypto layer.
+<p align="center">
+  <a href="https://aegis-xyz.vercel.app"><strong>Live demo</strong></a>
+  &nbsp;·&nbsp;
+  <a href="./docs/architecture.md">Architecture</a>
+  &nbsp;·&nbsp;
+  <a href="./docs/threat-model.md">Threat model</a>
+  &nbsp;·&nbsp;
+  <a href="./docs/security-notes.md">Security audit</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/pradhankukiran/hermetic">Sibling: Hermetic</a>
+</p>
 
-[![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org)
-[![React 19](https://img.shields.io/badge/React-19-000000?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-000000?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![Tailwind CSS v4](https://img.shields.io/badge/Tailwind-v4-000000?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-[![Vitest](https://img.shields.io/badge/Vitest-392%2F392-000000?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev)
+<p align="center">
+  <a href="https://nextjs.org"><img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white"/></a>
+  <a href="https://react.dev"><img alt="React 19" src="https://img.shields.io/badge/React-19-000000?style=for-the-badge&logo=react&logoColor=white"/></a>
+  <a href="https://www.typescriptlang.org"><img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-000000?style=for-the-badge&logo=typescript&logoColor=white"/></a>
+  <a href="https://tailwindcss.com"><img alt="Tailwind v4" src="https://img.shields.io/badge/Tailwind-v4-000000?style=for-the-badge&logo=tailwindcss&logoColor=white"/></a>
+  <a href="https://vitest.dev"><img alt="Vitest 392/392" src="https://img.shields.io/badge/Vitest-392%2F392-000000?style=for-the-badge&logo=vitest&logoColor=white"/></a>
+</p>
 
-[![Nostr](https://img.shields.io/badge/Nostr-NIP--44%20v2-000000?style=for-the-badge&logoColor=white)](https://github.com/nostr-protocol/nips/blob/master/44.md)
-[![Matrix](https://img.shields.io/badge/Matrix-Vodozemac%20WASM-000000?style=for-the-badge&logo=matrix&logoColor=white)](https://matrix.org)
-[![libsodium](https://img.shields.io/badge/libsodium-XChaCha20--Poly1305-000000?style=for-the-badge&logoColor=white)](https://libsodium.gitbook.io)
-[![secp256k1](https://img.shields.io/badge/secp256k1-BIP--340%20Schnorr-000000?style=for-the-badge&logoColor=white)](https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki)
-[![drand](https://img.shields.io/badge/drand-quicknet-000000?style=for-the-badge&logoColor=white)](https://drand.love)
+<p align="center">
+  <a href="https://matrix.org"><img alt="Matrix Olm/Megolm via Vodozemac WASM" src="https://img.shields.io/badge/Matrix-Vodozemac%20WASM-000000?style=for-the-badge&logo=matrix&logoColor=white"/></a>
+  <a href="https://github.com/nostr-protocol/nips/blob/master/44.md"><img alt="Nostr NIP-44 v2" src="https://img.shields.io/badge/Nostr-NIP--44%20v2-000000?style=for-the-badge&logoColor=white"/></a>
+  <a href="https://libsodium.gitbook.io"><img alt="libsodium XChaCha20-Poly1305" src="https://img.shields.io/badge/libsodium-XChaCha20--Poly1305-000000?style=for-the-badge&logoColor=white"/></a>
+  <a href="https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki"><img alt="secp256k1 BIP-340 Schnorr" src="https://img.shields.io/badge/secp256k1-BIP--340%20Schnorr-000000?style=for-the-badge&logoColor=white"/></a>
+  <a href="https://drand.love"><img alt="drand quicknet timelock" src="https://img.shields.io/badge/drand-quicknet-000000?style=for-the-badge&logoColor=white"/></a>
+</p>
 
 <br />
 
