@@ -76,7 +76,7 @@ export function FeatureRoster() {
       aria-labelledby="roster-heading"
       className="scroll-mt-24 border-b-4 border-foreground bg-background"
     >
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-14 sm:px-6 sm:py-20 lg:px-12">
+      <div className="mx-auto flex w-full max-w-[88rem] flex-col gap-8 px-4 py-14 sm:px-6 sm:py-20 lg:px-12">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-col gap-2">
             <p className="text-muted-foreground font-mono text-[11px] font-bold uppercase tracking-widest sm:text-xs">
@@ -98,10 +98,20 @@ export function FeatureRoster() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {FEATURES.map((f) => (
-            <FeatureCard key={f.href} feature={f} />
-          ))}
+        {/* 4 above, 3 below centered — bottom row keeps the same card width
+            as the top row by constraining its width to 75% - half-gap
+            (3 cards + 2 gaps == 75% of 4 cards + 3 gaps). */}
+        <div className="flex flex-col gap-5">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.slice(0, 4).map((f) => (
+              <FeatureCard key={f.href} feature={f} />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:mx-auto lg:w-[calc(75%-0.3125rem)] lg:grid-cols-3">
+            {FEATURES.slice(4).map((f) => (
+              <FeatureCard key={f.href} feature={f} />
+            ))}
+          </div>
         </div>
       </div>
     </section>
