@@ -5,7 +5,7 @@ import "./globals.css";
 import { SiteNav } from "@/components/landing/SiteNav";
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
