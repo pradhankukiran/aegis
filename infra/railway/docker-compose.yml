@@ -1,0 +1,69 @@
+# Aegis Railway-native deployment variant.
+# Three services — no Caddy (Railway terminates TLS per `*.up.railway.app` URL),
+# no Tor (Crucible source detects clearnet vs Tor at runtime).
+#
+# Railway does NOT consume this file via `railway up` like local Docker Compose.
+# Instead, drag-and-drop the file onto your Railway project canvas; Railway
+# imports each service (and its volume) as a staged change. Build-from-source
+# services need a GitHub repo backing the build — see README.md for the flow.
+#
+# This file therefore plays two roles:
+#   1. Documents the topology (one file, three services, the right env / volumes).
+#   2. Feeds Railway's Compose importer to bootstrap the project.
+
+services:
+  conduit:
+    image: matrixconduit/matrix-conduit:latest
+    restart: unless-stopped
+    environment:
+      # Conduit's server_name MUST match the URL clients use to reach it.
+      # Railway injects RAILWAY_PUBLIC_DOMAIN at runtime (e.g.
+      # `aegis-conduit-production.up.railway.app`). Conduit reads CONDUIT_SERVER_NAME
+      # at boot — if your homeserver URL is stable, prefer setting
+      # AEGIS_CONDUIT_PUBLIC_HOSTNAME manually in the Railway dashboard and
+      # leaving CONDUIT_SERVER_NAME pinned to that value, since changing
+      # server_name later invalidates existing room state.
+      CONDUIT_SERVER_NAME: ${AEGIS_CONDUIT_PUBLIC_HOSTNAME:-${RAILWAY_PUBLIC_DOMAIN}}
+      CONDUIT_DATABASE_BACKEND: rocksdb
+      CONDUIT_PORT: "6167"
+      CONDUIT_ADDRESS: 0.0.0.0
+      CONDUIT_ALLOW_REGISTRATION: "true"
+      CONDUIT_REGISTRATION_TOKEN: ${CONDUIT_REGISTRATION_TOKEN:-changeme}
+      CONDUIT_DATABASE_PATH: /var/lib/matrix-conduit
+    ports:
+      - "6167"
+    volumes:
+      - conduit_data:/var/lib/matrix-conduit
+
+  strfry:
+    # Reuses the self-hosted Dockerfile via relative path — no duplication.
+    # The Railway importer needs a GitHub repo for build-from-source services
+    # (see README.md §Deploy). This relative path is what you set as the
+    # service's "Dockerfile Path" in Railway's build settings.
+    build:
+      context: ../docker/strfry
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "7777"
+    volumes:
+      - strfry_data:/app/strfry-db
+
+  ssb-pub:
+    # Same reuse pattern as strfry — image built from ../docker/ssb-pub.
+    build:
+      context: ../docker/ssb-pub
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # Expose 8990 — the Aegis JSON-WS bridge. The native ssb-ws plugin on 8989
+    # is for Node SSB peers; the browser only ever talks to the bridge.
+    # See src/lib/transport/ssb.ts for the wire spec.
+    ports:
+      - "8990"
+    volumes:
+      - ssb_data:/root/.ssb
+
+volumes:
+  conduit_data:
+  strfry_data:
+  ssb_data:

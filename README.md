@@ -130,6 +130,8 @@ Defaults to `aegis.app` as the served domain; override with `AEGIS_DOMAIN=mydoma
 
 Without Docker, Aegis falls back to public Nostr relays and any homeserver / SSB pub the user points it at.
 
+Deploying to Railway instead of a VM? See [`infra/railway/`](./infra/railway/) — three services, no Caddy, no Tor, TLS handled per `*.up.railway.app` URL.
+
 <br />
 
 ## Tests
