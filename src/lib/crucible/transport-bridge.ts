@@ -31,7 +31,7 @@
  * # `from` field
  *
  * Crucible pointer events are anonymous by design — the source's `sender`
- * (Nostr pubkey, Matrix MXID, SSB feed id) is whatever throwaway transport
+ * (Nostr pubkey, Matrix MXID) is whatever throwaway transport
  * identity the source happens to have. We do not log or persist the
  * sender's id; the newsroom only sees the source's `ephemeralPubkey`.
  */

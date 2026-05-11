@@ -43,7 +43,7 @@ export type PositionFix = {
 /**
  * A position fix received from a circle member. `from` is the sender's
  * canonical pubkey in whatever form the origin transport surfaced (Nostr →
- * 64-char x-only hex; Matrix MXID / SSB feed id for those origins — same
+ * 64-char x-only hex; Matrix MXID for that origin — same
  * caveat as Herald's `from` canonicalization).
  */
 export type ReceivedFix = PositionFix & { from: string };

@@ -9,7 +9,7 @@
  *
  * `AegisTransport.subscribe` already dedups across networks by the
  * AegisEvent id (sha256 of sender:type:canonicalize(content)). So a
- * ballot a voter fanned out to Nostr + Matrix + SSB collapses to one
+ * ballot a voter fanned out to Nostr + Matrix collapses to one
  * delivery here. The dedup window is 60s (TTL inside the facade), which
  * is more than enough for the live stream; for replay of historical
  * ballots, we additionally dedup on `[pollId, voter]` (one ballot per

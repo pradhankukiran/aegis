@@ -110,13 +110,11 @@ export function useIdentity(): {
 export type TransportStatus = {
   nostr: boolean | null;
   matrix: boolean | null;
-  ssb: boolean | null;
 };
 
 const INITIAL_STATUS: TransportStatus = {
   nostr: null,
   matrix: null,
-  ssb: null,
 };
 
 /**
@@ -127,11 +125,9 @@ const INITIAL_STATUS: TransportStatus = {
 function readTransportConfig() {
   const matrixHs =
     process.env.NEXT_PUBLIC_AEGIS_MATRIX_HOMESERVER ?? "https://matrix.aegis.app";
-  const ssbUrl =
-    process.env.NEXT_PUBLIC_AEGIS_SSB_URL ?? "wss://ssb.aegis.app/aegis-ws";
   const matrixToken =
     process.env.NEXT_PUBLIC_AEGIS_MATRIX_REGISTRATION_TOKEN ?? undefined;
-  return { matrixHs, ssbUrl, matrixToken };
+  return { matrixHs, matrixToken };
 }
 
 /**
@@ -172,14 +168,13 @@ export function useTransport(identity: Identity | null): {
       // can't be bundled into the SSR pass. Importing here keeps the page's
       // initial JS lean, too.
       const { AegisTransport } = await import("../transport");
-      const { matrixHs, ssbUrl, matrixToken } = readTransportConfig();
+      const { matrixHs, matrixToken } = readTransportConfig();
       local = new AegisTransport(identity, {
         nostr: {},
         matrix: {
           homeserver: matrixHs,
           ...(matrixToken ? { registrationToken: matrixToken } : {}),
         },
-        ssb: { pubUrl: ssbUrl },
       });
       try {
         const connected = await local.connect();
@@ -193,11 +188,10 @@ export function useTransport(identity: Identity | null): {
         setStatus({
           nostr: connected.nostr,
           matrix: connected.matrix,
-          ssb: connected.ssb,
         });
       } catch {
         if (cancelled) return;
-        setStatus({ nostr: false, matrix: false, ssb: false });
+        setStatus({ nostr: false, matrix: false });
       }
     })();
 
@@ -213,7 +207,7 @@ export function useTransport(identity: Identity | null): {
   }, [identity]);
 
   const ready = useMemo(
-    () => Boolean(transport) && (status.nostr === true || status.matrix === true || status.ssb === true),
+    () => Boolean(transport) && (status.nostr === true || status.matrix === true),
     [transport, status],
   );
 
@@ -366,8 +360,8 @@ export function useMessages(convId: string | null): {
  *
  *   1. Mints a UUID for the message.
  *   2. Inserts a `sending` row into IndexedDB and pushes it onto local state.
- *   3. Calls `transport.directMessage(convId, plaintext)` (Matrix → Nostr →
- *      SSB fallback chain — see `transport/index.ts`).
+ *   3. Calls `transport.directMessage(convId, plaintext)` (Matrix → Nostr
+ *      fallback chain — see `transport/index.ts`).
  *   4. On success: marks the row `sent` and stamps `via` with the network
  *      that won the race.
  *   5. On failure: marks `failed`. Reason is logged to console; we don't

@@ -21,12 +21,12 @@
  * the user ever published, filtered locally by hash" to "exactly the
  * event(s) that anchor this hash".
  *
- * ## Matrix + SSB legs — facade scan
+ * ## Matrix leg — facade scan
  *
- * The Matrix/SSB legs don't have a relay-side filter that knows about
- * Aegis-level content; we keep the cross-network subscribe for those two
- * (it does its own type-level filtering on the wire) and post-filter the
- * inbound events by `content.hash`.
+ * The Matrix leg doesn't have a relay-side filter that knows about
+ * Aegis-level content; we keep the cross-network subscribe (it does its
+ * own type-level filtering on the wire) and post-filter the inbound
+ * events by `content.hash`.
  *
  * ## Why we still keep a short timeout
  *
@@ -97,7 +97,7 @@ export const VERIFY_TIMEOUT_MS = 4000;
  * Shape the subscribe payload converts into for the matcher. We accept the
  * loosest possible JSON because each transport's serializer may surface
  * the `content` as `{ hash, sig, ... }` directly (Nostr/Matrix) or as a
- * nested record (SSB sometimes wraps additional metadata).
+ * nested record.
  */
 type RawAnchorLike = {
   hash?: unknown;
@@ -126,12 +126,11 @@ export async function verifyAnchor(
   // Per-network "best" event we've seen so far. We score by "found + valid"
   // > "found + signature-failed" > "not found"; the first valid match wins.
   const byNetwork: Record<
-    "nostr" | "matrix" | "ssb",
+    "nostr" | "matrix",
     NetworkVerification
   > = {
     nostr: { network: "nostr", found: false },
     matrix: { network: "matrix", found: false },
-    ssb: { network: "ssb", found: false },
   };
 
   const recordSighting = (
@@ -183,9 +182,9 @@ export async function verifyAnchor(
     /* nostr unavailable — fall through to the assembly path */
   }
 
-  // Matrix + SSB leg: keep the facade subscribe. Neither transport has a
-  // relay-side hash filter we can lean on; the facade's type-level filter
-  // + our content.hash post-filter is the right shape.
+  // Matrix leg: keep the facade subscribe. Matrix has no relay-side hash
+  // filter we can lean on; the facade's type-level filter + our
+  // content.hash post-filter is the right shape.
   try {
     const facadeUnsub = transport.subscribe(
       { type: WITNESS_EVENT_TYPE, since: 0 },
@@ -223,7 +222,6 @@ export async function verifyAnchor(
   const networks: NetworkVerification[] = [
     byNetwork.nostr,
     byNetwork.matrix,
-    byNetwork.ssb,
   ];
   const anyValidMatch = networks.some(
     (n) => n.found && n.signatureValid === true,

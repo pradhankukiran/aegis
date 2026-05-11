@@ -95,23 +95,19 @@ export function useIdentity(): {
 export type TransportStatus = {
   nostr: boolean | null;
   matrix: boolean | null;
-  ssb: boolean | null;
 };
 
 const INITIAL_STATUS: TransportStatus = {
   nostr: null,
   matrix: null,
-  ssb: null,
 };
 
 function readTransportConfig() {
   const matrixHs =
     process.env.NEXT_PUBLIC_AEGIS_MATRIX_HOMESERVER ?? "https://matrix.aegis.app";
-  const ssbUrl =
-    process.env.NEXT_PUBLIC_AEGIS_SSB_URL ?? "wss://ssb.aegis.app/aegis-ws";
   const matrixToken =
     process.env.NEXT_PUBLIC_AEGIS_MATRIX_REGISTRATION_TOKEN ?? undefined;
-  return { matrixHs, ssbUrl, matrixToken };
+  return { matrixHs, matrixToken };
 }
 
 export function useTransport(identity: Identity | null): {
@@ -131,14 +127,13 @@ export function useTransport(identity: Identity | null): {
 
     (async () => {
       const { AegisTransport } = await import("../transport");
-      const { matrixHs, ssbUrl, matrixToken } = readTransportConfig();
+      const { matrixHs, matrixToken } = readTransportConfig();
       local = new AegisTransport(identity, {
         nostr: {},
         matrix: {
           homeserver: matrixHs,
           ...(matrixToken ? { registrationToken: matrixToken } : {}),
         },
-        ssb: { pubUrl: ssbUrl },
       });
       try {
         const connected = await local.connect();
@@ -151,11 +146,10 @@ export function useTransport(identity: Identity | null): {
         setStatus({
           nostr: connected.nostr,
           matrix: connected.matrix,
-          ssb: connected.ssb,
         });
       } catch {
         if (cancelled) return;
-        setStatus({ nostr: false, matrix: false, ssb: false });
+        setStatus({ nostr: false, matrix: false });
       }
     })();
 
@@ -173,7 +167,7 @@ export function useTransport(identity: Identity | null): {
   const ready = useMemo(
     () =>
       Boolean(transport) &&
-      (status.nostr === true || status.matrix === true || status.ssb === true),
+      (status.nostr === true || status.matrix === true),
     [transport, status],
   );
 

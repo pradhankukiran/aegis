@@ -11,15 +11,14 @@
  * # Why one envelope, not one per network
  *
  * The envelope is identical content-wise regardless of which network it
- * traverses — same drand round, same payload. We could publish a single
- * pre-built string to all three networks via `transport.publish` (which
- * fans out) and the resulting AegisEvent ids would even canonicalize the
- * same way. That's the v1 shape.
+ * traverses — same drand round, same payload. We publish a single
+ * pre-built string to both networks via `transport.publish` (which fans
+ * out) and the resulting AegisEvent ids canonicalize the same way.
+ * That's the v1 shape.
  *
  * (Per-network bespoke envelopes are reserved for a future enhancement
- * where, e.g., we want to route the SSB envelope to a specific peer-list
- * tag and the Nostr envelope to a different relay set. v1 doesn't need
- * that — we just want fan-out.)
+ * where, e.g., we want to route the Nostr envelope to a different relay
+ * set than the default. v1 doesn't need that — we just want fan-out.)
  *
  * # Status side-effects
  *

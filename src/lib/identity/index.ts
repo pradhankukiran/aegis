@@ -3,8 +3,7 @@
  *
  * The master identity is a single secp256k1 keypair, generated locally on
  * first run, persisted in IndexedDB, and exportable as a versioned string.
- * See `keypair.ts` for the full design rationale (Nostr-native master,
- * derivation roadmap for SSB / Matrix).
+ * See `keypair.ts` for the full design rationale (Nostr-native master).
  */
 
 export {

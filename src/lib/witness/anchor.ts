@@ -46,9 +46,9 @@
  * We picked option (a) from the design discussion: bypass the facade for
  * the Nostr leg and call `transport.nostr.publish` directly with a
  * hand-crafted kind 30078 event whose d-tag is
- * `aegis:aegis.witness:<hash>`. Matrix and SSB still go through the facade
- * because they don't have the replaceable-key problem and the facade's
- * mapping for those two is already correct.
+ * `aegis:aegis.witness:<hash>`. Matrix still goes through the facade
+ * because it doesn't have the replaceable-key problem and the facade's
+ * Matrix mapping is already correct.
  *
  * The alternative (b) would have been to extend `AegisTransport.publish`
  * with an optional `nostrDTag` parameter that gets interpolated into the
@@ -184,7 +184,7 @@ export type LocalAnchorMeta = {
  *    payload on every network. Everything else stays local.
  *  - The Nostr leg bypasses `transport.publish` so we can stamp a per-hash
  *    `d` tag (`aegis:aegis.witness:<hash>`). See the file header for why.
- *    Matrix and SSB still go through `transport.publish({ channels: [...] })`.
+ *    Matrix still goes through `transport.publish({ channels: [...] })`.
  *  - Both legs run concurrently inside `Promise.allSettled`, so a failure
  *    on one network never blocks the other.
  *  - Networks that aren't connected don't appear in the publish result;
@@ -205,11 +205,11 @@ export async function publishAnchor(
   };
 
   // Two-leg fan-out. The nostr leg gets the per-hash d-tag treatment; the
-  // matrix+ssb leg goes through the facade where the shared-d-tag behaviour
-  // is already correct (neither transport is parameterized-replaceable).
+  // matrix leg goes through the facade where the shared-d-tag behaviour
+  // is already correct (Matrix isn't parameterized-replaceable).
   const [nostrSettled, facadeSettled] = await Promise.allSettled([
     publishNostrAnchor(transport, wire),
-    publishMatrixAndSsbAnchor(transport, wire),
+    publishMatrixAnchor(transport, wire),
   ]);
 
   const raw: PublishResult[] = [];
@@ -276,15 +276,15 @@ async function publishNostrAnchor(
 }
 
 /**
- * Publish the anchor to Matrix and SSB through the facade. We let the
+ * Publish the anchor to Matrix through the facade. We let the
  * facade handle channel-selection: it filters out unconnected networks and
  * returns at-most one entry per connected channel.
  */
-async function publishMatrixAndSsbAnchor(
+async function publishMatrixAnchor(
   transport: AegisTransport,
   wire: Anchor,
 ): Promise<PublishResult[]> {
-  const channels: Network[] = ["matrix", "ssb"];
+  const channels: Network[] = ["matrix"];
   try {
     return await transport.publish({
       type: WITNESS_EVENT_TYPE,
@@ -293,8 +293,7 @@ async function publishMatrixAndSsbAnchor(
     });
   } catch (err) {
     // Facade.publish is already per-network-resilient, but a whole-call
-    // rejection still needs to surface as failure on both networks rather
-    // than disappearing.
+    // rejection still needs to surface as failure rather than disappearing.
     const reason = describeError(err);
     return channels.map((network) => ({ network, ok: false, reason }));
   }
@@ -318,9 +317,9 @@ function assembleRecord(
     });
   }
   // Backfill the networks that didn't return a result at all (not connected,
-  // or a global publish failure). Order: nostr, matrix, ssb — matches the
+  // or a global publish failure). Order: nostr, matrix — matches the
   // order the badges appear in the UI.
-  for (const n of ["nostr", "matrix", "ssb"] as const) {
+  for (const n of ["nostr", "matrix"] as const) {
     if (seen.has(n)) continue;
     results.push({
       network: n,

@@ -3,20 +3,18 @@
  *
  * The unified `subscribeDM` channel surfaces incoming direct messages from
  * each transport (Nostr kind-14 with NIP-44 v2 decrypt, Matrix 1:1 DM
- * timeline, SSB `aegis-dm` typed event). The bridge persists each one and
- * fires an optional UI callback.
+ * timeline). The bridge persists each one and fires an optional UI callback.
  *
  * # `from` canonicalization
  *
  * `IncomingDM.from` is whatever the origin network exposes:
  *   - nostr   → x-only 64-char hex
  *   - matrix  → MXID (e.g. `@abcd1234...:matrix.aegis.app`)
- *   - ssb     → SSB feed id (e.g. `@<base64>.ed25519`)
  *
  * Herald keys conversations by this `from` value verbatim. That means a
  * remote peer whose Matrix and Nostr identities map to different `from`
  * forms will show up as two separate conversations until Phase 4 adds an
- * MXID/SSBid → pubkey-hex directory lookup. For Phase 3 + 4-prep this is
+ * MXID → pubkey-hex directory lookup. For Phase 3 + 4-prep this is
  * accepted scope.
  */
 import { appendMessage, getConversation, saveConversation } from "./store";
@@ -62,7 +60,7 @@ async function handleIncoming(
  *
  * `convId` is the network-native `from` (see file-level docs). The caller's
  * `addConversation` path will normalize hex inputs to lowercase x-only at the
- * UI boundary; values that arrive here from Matrix / SSB are kept verbatim.
+ * UI boundary; values that arrive here from Matrix are kept verbatim.
  */
 export function projectIncoming(dm: IncomingDM): Message | null {
   if (!dm || typeof dm.plaintext !== "string" || dm.plaintext === "") {
@@ -71,7 +69,7 @@ export function projectIncoming(dm: IncomingDM): Message | null {
   if (typeof dm.from !== "string" || dm.from === "") return null;
   // Hex senders (Nostr) get lowercased so conversation lookup matches the
   // canonical x-only form Herald uses everywhere else. Non-hex senders
-  // (Matrix MXID, SSB feed id) pass through unchanged.
+  // (Matrix MXID) pass through unchanged.
   const convId = /^[0-9a-fA-F]{64}$/.test(dm.from)
     ? dm.from.toLowerCase()
     : dm.from;

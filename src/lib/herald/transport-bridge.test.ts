@@ -301,13 +301,10 @@ describe("herald / projectIncoming", () => {
     expect(m?.convId).toBe(upper.toLowerCase());
   });
 
-  it("passes non-hex `from` (Matrix MXID, SSB id) through verbatim", () => {
+  it("passes non-hex `from` (Matrix MXID) through verbatim", () => {
     const mxid = "@abcd1234abcd1234abcd1234:matrix.aegis.app";
     expect(projectIncoming(makeDM({ from: mxid, network: "matrix" }))?.convId)
       .toBe(mxid);
-    const ssbId = "@AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.ed25519";
-    expect(projectIncoming(makeDM({ from: ssbId, network: "ssb" }))?.convId)
-      .toBe(ssbId);
   });
 
   it("converts ts seconds → ms", () => {

@@ -8,8 +8,8 @@
  * canonical 64-hex-char form.
  *
  * Why x-only? Because the wire formats Aegis crosses (Nostr, Matrix MXID
- * derivation, SSB tag) all consume the x-coordinate alone. The caller
- * supplies whatever form is convenient; we normalize once and keep it.
+ * derivation) all consume the x-coordinate alone. The caller supplies
+ * whatever form is convenient; we normalize once and keep it.
  */
 import type { Network } from "../transport";
 

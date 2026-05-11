@@ -22,10 +22,10 @@
  *
  * Each tick costs N transport.directMessage calls, where N = circle size.
  * `directMessage` returns after the first network in the fallback chain
- * (Matrix → Nostr → SSB) accepts the send, so per-recipient latency is
+ * (Matrix → Nostr) accepts the send, so per-recipient latency is
  * bounded by whichever transport is healthiest. For a 10-member circle on
- * a 5-minute interval that's 2 calls/minute — well within rate limits even
- * on the slowest of the three networks.
+ * a 5-minute interval that's 2 calls/minute — well within rate limits on
+ * both networks.
  *
  * # Geolocation permission interaction
  *

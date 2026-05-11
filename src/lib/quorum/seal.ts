@@ -4,7 +4,7 @@
  * `sealVote` produces the base64url string that fills the wire `Ballot.sealedB64`
  * field. The output is the body of a tlock-js armored ciphertext, encoded
  * to base64url so it's safe to embed in Nostr event content / Matrix custom
- * events / SSB messages without further escaping.
+ * events without further escaping.
  *
  * # The inner payload (sign-then-seal)
  *

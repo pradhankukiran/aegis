@@ -168,7 +168,7 @@ class StubTransport {
 
   async publish(event: AegisEventInput): Promise<PublishResult[]> {
     this.facadeCalls.push(event);
-    const channels = event.channels ?? ["nostr", "matrix", "ssb"];
+    const channels = event.channels ?? ["nostr", "matrix"];
     return channels.map((network) => ({
       network,
       ok: true,
@@ -205,13 +205,13 @@ describe("witness / publishAnchor per-hash d-tag", () => {
     // network we know about.
     for (const r of [recordA, recordB]) {
       const networks = r.networkResults.map((n) => n.network).sort();
-      expect(networks).toEqual(["matrix", "nostr", "ssb"]);
+      expect(networks).toEqual(["matrix", "nostr"]);
       const nostrResult = r.networkResults.find((n) => n.network === "nostr");
       expect(nostrResult?.ok).toBe(true);
     }
   });
 
-  it("matrix + ssb go through the facade (no nostr channel)", async () => {
+  it("matrix goes through the facade (no nostr channel)", async () => {
     const id = await generateIdentity();
     const anchor = signAnchor(id, SAMPLE_HASH, 1_700_000_000);
     const transport = new StubTransport();
@@ -220,7 +220,7 @@ describe("witness / publishAnchor per-hash d-tag", () => {
     // Exactly one facade call, scoped to non-nostr channels so the
     // per-hash leg owns Nostr exclusively.
     expect(transport.facadeCalls.length).toBe(1);
-    expect(transport.facadeCalls[0].channels).toEqual(["matrix", "ssb"]);
+    expect(transport.facadeCalls[0].channels).toEqual(["matrix"]);
     expect(transport.facadeCalls[0].type).toBe(WITNESS_EVENT_TYPE);
   });
 

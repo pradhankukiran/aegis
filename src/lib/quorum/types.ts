@@ -21,8 +21,8 @@
  *                             poll's `drandRound`; nobody can recover
  *                             `optionIndex` before then.
  *
- * Both events fan out across Nostr, Matrix, and SSB via the standard
- * three-network mesh. Ballots carry an `["e", pollId]` Nostr tag so a
+ * Both events fan out across Nostr and Matrix via the standard
+ * two-network mesh. Ballots carry an `["e", pollId]` Nostr tag so a
  * tallier can subscribe to just one poll's ballots without seeing
  * unrelated traffic.
  *

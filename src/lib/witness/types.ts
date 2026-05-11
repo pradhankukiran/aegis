@@ -5,7 +5,7 @@
  *
  *   1. User picks a file → browser SHA-256-hashes it client-side.
  *   2. Aegis identity signs the hash (BIP-340 Schnorr) → produces an `Anchor`.
- *   3. The Anchor is fanned out across Nostr + Matrix + SSB via
+ *   3. The Anchor is fanned out across Nostr + Matrix via
  *      `AegisTransport.publish({ type: "aegis.witness", content: anchor })`.
  *   4. Per-network outcomes plus the local file metadata get stored as an
  *      `AnchorRecord` in IndexedDB so the history UI can render later.
@@ -42,9 +42,9 @@ export type Anchor = {
 
 /**
  * Per-network outcome of a publish attempt. `eventId` is the wire-native id
- * when the underlying transport surfaces one (Matrix `event_id`, SSB `msg_id`
- * — Nostr's `publish()` does not return its event id from the SimplePool
- * fan-out so it's left undefined on success; see the open-questions note in
+ * when the underlying transport surfaces one (Matrix `event_id` — Nostr's
+ * `publish()` does not return its event id from the SimplePool fan-out so
+ * it's left undefined on success; see the open-questions note in
  * `anchor.ts`).
  */
 export type AnchorNetworkResult = {
@@ -86,8 +86,8 @@ export type NetworkVerification = {
  *
  *  - `overallOk`     — signature valid AND found on at least one network.
  *                       This is the "the anchor is real" answer.
- *  - `fullyAnchored` — found on every configured network (3/3). The
- *                       three-network resilience promise the plan §3.4
+ *  - `fullyAnchored` — found on every configured network (2/2). The
+ *                       two-network resilience promise the plan §3.4
  *                       sketches the proof against.
  */
 export type Verification = {

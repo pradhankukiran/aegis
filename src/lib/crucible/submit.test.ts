@@ -124,7 +124,6 @@ class StubTransport {
   publishResults: PublishResult[] = [
     { network: "nostr", ok: true, reason: "relays ok: 1/1" },
     { network: "matrix", ok: true, id: "$matrix-event-id" },
-    { network: "ssb", ok: true, id: "%ssb-msg-id.sha256" },
   ];
   async publish(event: AegisEventInput): Promise<PublishResult[]> {
     this.publishedEvents.push(event);
@@ -170,7 +169,7 @@ describe("crucible / submit", () => {
       expect(result.dropId).toBe(
         dropIdFromPointer(uploadMock.cidToReturn, result.ephemeralPubkeyHex),
       );
-      expect(result.publishResults.length).toBe(3);
+      expect(result.publishResults.length).toBe(2);
 
       // Pinata upload was called exactly once with the encrypted blob.
       expect(uploadMock.lastCalledWithSignedUrl).toBe(fakeSignedUrl);

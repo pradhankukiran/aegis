@@ -219,8 +219,7 @@ function makeRecord(overrides: Partial<AnchorRecord> = {}): AnchorRecord {
     fileSize: 12345,
     networkResults: [
       { network: "nostr", ok: true, eventId: "n-1" },
-      { network: "matrix", ok: true, eventId: "m-1" },
-      { network: "ssb", ok: false, reason: "not connected" },
+      { network: "matrix", ok: false, reason: "not connected" },
     ],
     createdAt: Date.now(),
     ...overrides,
@@ -292,7 +291,6 @@ describe("witness / storage", () => {
       networkResults: [
         { network: "nostr", ok: true, reason: "relays ok: 3/3" },
         { network: "matrix", ok: false, reason: "homeserver unreachable" },
-        { network: "ssb", ok: true, eventId: "ssb-xyz" },
       ],
     });
     await saveAnchor(rec);

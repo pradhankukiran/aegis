@@ -1,8 +1,7 @@
 // Aegis master identity is a single secp256k1 keypair: Nostr-native (BIP-340)
-// and the seed for everything else. Derivation roadmap (built in Phase 2 when
-// transports land): Ed25519 keys for SSB are derived via HKDF off the master
-// seed; Matrix uses its own device-key protocol (Curve25519 + Ed25519 +
-// cross-signing) layered on top — NOT derived from this keypair directly.
+// and the seed for everything else. Matrix uses its own device-key protocol
+// (Curve25519 + Ed25519 + cross-signing) layered on top — NOT derived from
+// this keypair directly.
 
 import { secp256k1 } from "@noble/curves/secp256k1.js";
 
